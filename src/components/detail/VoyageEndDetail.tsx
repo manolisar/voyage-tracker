@@ -1,27 +1,26 @@
-// VoyageEndDetail — close-out node. Slimmed in v8: the previous incarnation
-// duplicated the Cruise Summary block from VoyageDetail (fuel + water totals).
-// Both views read the same calcVoyageTotals output, so this page focuses on
-// what's UNIQUE to closing the voyage:
+// VoyageEndDetail — close-out node. Slimmed in v8 to only show what's
+// UNIQUE to closing the voyage (i.e. not already on VoyageDetail):
 //   • Who closed it and when
-//   • Lub-oil readings (recorded only at close)
-//   • Densities at close (a true snapshot, useful for forensic compare)
 //   • Notes
 //   • Reopen affordance — when in edit mode, the chief can lift the lock
 //     to amend; re-closing re-locks.
+//
+// Lub-oil and densities-at-close used to live here too, but VoyageDetail
+// already shows both (lub-oil in the Cruise Summary lube card; densities
+// in the Fuel Densities card), so duplicating them here was just noise.
+// The underlying voyageEnd.lubeOil and voyageEnd.densitiesAtClose fields
+// are still written on close — they sit on disk for audit, just aren't
+// re-rendered on this page.
 
 import { useSession } from '../../hooks/useSession';
 import { useToast } from '../../hooks/useToast';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { voyageRouteLongLabel } from '../../domain/factories';
 import { Unlock } from '../Icons';
-import type { ShipClass, Voyage } from '../../types/domain';
+import type { Voyage } from '../../types/domain';
 
 interface Props {
   voyage: Voyage;
-  // shipClass kept for symmetry with the rest of the detail components and
-  // future-proofing; currently unused since this view no longer recomputes
-  // totals.
-  shipClass: ShipClass;
 }
 
 export function VoyageEndDetail({ voyage }: Props) {
@@ -81,35 +80,6 @@ export function VoyageEndDetail({ voyage }: Props) {
         </div>
       </section>
 
-      {/* Lub-oil — recorded only at close, never per-report */}
-      <section className="cat-card lube mb-5">
-        <div className="cat-label">Lub-Oil (recorded only here)</div>
-        <div className="cat-body">
-          <Mini label="ME consumption" value={end.lubeOil?.meCons} suffix="L" />
-          <Mini label="13S/14S" value={end.lubeOil?.lo13s14s} suffix="L" />
-          <Mini label="13C used" value={end.lubeOil?.usedLo13c} suffix="L" />
-        </div>
-      </section>
-
-      {/* Densities at close — frozen snapshot of voyage.densities at first
-          close. The chief can compare these against the live voyage.densities
-          shown on Voyage Detail to see if they were edited post-close. */}
-      {end.densitiesAtClose && (
-        <section className="glass-card rounded-2xl p-5 mb-5">
-          <div className="section-label mb-3">
-            Densities at Close{' '}
-            <span className="font-mono ml-2" style={{ color: 'var(--color-dim)' }}>
-              t/m³
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <Field label="HFO" value={end.densitiesAtClose.HFO?.toFixed(3)} mono />
-            <Field label="MGO" value={end.densitiesAtClose.MGO?.toFixed(3)} mono />
-            <Field label="LSFO" value={end.densitiesAtClose.LSFO?.toFixed(3)} mono />
-          </div>
-        </section>
-      )}
-
       {end.notes && (
         <section className="glass-card rounded-2xl p-5">
           <div className="section-label mb-2">Notes</div>
@@ -141,23 +111,6 @@ function Field({ label, value, mono }: FieldProps) {
       >
         {value || '—'}
       </div>
-    </div>
-  );
-}
-
-interface MiniProps {
-  label: string;
-  value: string | null | undefined;
-  suffix?: string;
-}
-
-function Mini({ label, value, suffix }: MiniProps) {
-  return (
-    <div className="mini-row">
-      <span className="mr-label">{label}</span>
-      <span className="mr-val">
-        {value ? `${value}${suffix ? ` ${suffix}` : ''}` : '—'}
-      </span>
     </div>
   );
 }

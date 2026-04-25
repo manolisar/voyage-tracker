@@ -175,7 +175,7 @@ export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoy
   }
 
   if (selected.kind === 'voyageEnd') {
-    return <VoyageEndDetail voyage={voyage} shipClass={shipClass} />;
+    return <VoyageEndDetail voyage={voyage} />;
   }
 
   const leg = voyage.legs?.find((l) => l.id === selected.legId) || null;
