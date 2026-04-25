@@ -1,4 +1,3 @@
-// @ts-nocheck
 // AppShell — main view scaffold.
 // Wires: TopBar, sidebar (VoyageTree), main (DetailPane). The storage adapter
 // is installed by VoyageStoreProvider at module load (local File System
@@ -20,18 +19,19 @@ import { DeleteVoyageModal } from '../modals/DeleteVoyageModal';
 import { StaleFileModal } from '../modals/StaleFileModal';
 import { HelpModal } from '../modals/HelpModal';
 import { Eye } from '../Icons';
+import type { Ship, ShipClass } from '../../types/domain';
 
 export function AppShell() {
   const { shipId, editMode, enterEditMode } = useSession();
-  const [ship, setShip] = useState(null);
-  const [shipClass, setShipClass] = useState(null);
+  const [ship, setShip] = useState<Ship | null>(null);
+  const [shipClass, setShipClass] = useState<ShipClass | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [newVoyageOpen, setNewVoyageOpen] = useState(false);
-  const [addLegFor,   setAddLegFor]   = useState(null);
-  const [endVoyageFor, setEndVoyageFor] = useState(null);
-  const [deleteVoyageFor, setDeleteVoyageFor] = useState(null);
+  const [addLegFor, setAddLegFor] = useState<string | null>(null);
+  const [endVoyageFor, setEndVoyageFor] = useState<string | null>(null);
+  const [deleteVoyageFor, setDeleteVoyageFor] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -39,7 +39,7 @@ export function AppShell() {
     (async () => {
       try {
         const ships = await loadShips();
-        const s = ships.ships.find((x) => x.id === shipId) || null;
+        const s = ships.find((x) => x.id === shipId) || null;
         if (!alive) return;
         setShip(s);
         if (s?.classId) {
@@ -50,7 +50,9 @@ export function AppShell() {
         console.error('Failed to load ship/class', e);
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [shipId]);
 
   const sidebarStyle = useMemo(
@@ -67,13 +69,13 @@ export function AppShell() {
   // toggles the sidebar. Both are suppressed while the user is typing in an
   // input/textarea/contenteditable so we don't intercept normal characters.
   useEffect(() => {
-    const isEditable = (el) => {
+    const isEditable = (el: Element | null): boolean => {
       if (!el) return false;
-      if (el.isContentEditable) return true;
+      if ((el as HTMLElement).isContentEditable) return true;
       const tag = el.tagName;
       return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
     };
-    const onKey = (e) => {
+    const onKey = (e: KeyboardEvent) => {
       // Ctrl+B / Cmd+B → toggle sidebar (works even while typing)
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') {
         e.preventDefault();
@@ -194,7 +196,7 @@ function StaleFileModalHost() {
   if (!conflict) return null;
   const entry = voyages.find((v) => v.filename === conflict.filename);
   const routeLabel = entry && entry.fromPort?.code && entry.toPort?.code
-    ? `${entry.fromPort.code} \u2192 ${entry.toPort.code}`
+    ? `${entry.fromPort.code} → ${entry.toPort.code}`
     : '';
   const label = entry ? `${entry.startDate || ''} ${routeLabel}`.trim() : null;
   return (

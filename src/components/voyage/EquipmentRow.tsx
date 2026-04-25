@@ -1,24 +1,48 @@
-// @ts-nocheck
 // EquipmentRow — one tr per equipment item.
 // v7 refactor: takes a `def` from shipClass.equipment so allowedFuels / locked /
 // label / category are all data-driven. Counter inputs in m³, MT computed from
 // per-voyage densities.
 
 import { calcConsumption, formatMT } from '../../domain/calculations';
+import type { EquipmentDefinition, EquipmentReading, FuelKey } from '../../types/domain';
 
-const FUEL_ROW_CLASS = { HFO: 'fuel-row-hfo', MGO: 'fuel-row-mgo', LSFO: 'fuel-row-lsfo' };
-const FUEL_LOWER    = { HFO: 'hfo', MGO: 'mgo', LSFO: 'lsfo' };
+const FUEL_ROW_CLASS: Record<FuelKey, string> = {
+  HFO: 'fuel-row-hfo',
+  MGO: 'fuel-row-mgo',
+  LSFO: 'fuel-row-lsfo',
+};
+const FUEL_LOWER: Record<FuelKey, string> = { HFO: 'hfo', MGO: 'mgo', LSFO: 'lsfo' };
 
-export function EquipmentRow({ def, data, onChange, densities, disabled = false, readOnly = false }) {
+interface Props {
+  def: EquipmentDefinition;
+  data: EquipmentReading;
+  onChange: (next: EquipmentReading) => void;
+  densities: Partial<Record<FuelKey, number>>;
+  disabled?: boolean;
+  readOnly?: boolean;
+}
+
+export function EquipmentRow({
+  def,
+  data,
+  onChange,
+  densities,
+  disabled = false,
+  readOnly = false,
+}: Props) {
   const consumption = calcConsumption(data.start, data.end, data.fuel, densities);
-  const diff = (data.start !== '' && data.end !== '' && !isNaN(parseFloat(data.start)) && !isNaN(parseFloat(data.end)))
-    ? (parseFloat(data.end) - parseFloat(data.start)).toFixed(1)
-    : '\u2013';
+  const diff =
+    data.start !== '' &&
+    data.end !== '' &&
+    !isNaN(parseFloat(data.start)) &&
+    !isNaN(parseFloat(data.end))
+      ? (parseFloat(data.end) - parseFloat(data.start)).toFixed(1)
+      : '–';
   const isZero = consumption == null || consumption === 0;
 
   // Equipment is locked if explicitly disabled, readOnly, OR if its def says so.
   const fuelLocked = readOnly || disabled || def?.locked === true;
-  const allowed = def?.allowedFuels || ['HFO', 'MGO', 'LSFO'];
+  const allowed: FuelKey[] = def?.allowedFuels || ['HFO', 'MGO', 'LSFO'];
   const rowClass = FUEL_ROW_CLASS[data.fuel] || '';
   const fuelLower = FUEL_LOWER[data.fuel] || 'hfo';
 
@@ -33,7 +57,7 @@ export function EquipmentRow({ def, data, onChange, densities, disabled = false,
   return (
     <tr className={`table-row border-b ${rowClass}`} style={{ borderColor: 'var(--color-border-subtle)' }}>
       <td className="py-3 px-4 font-bold" style={{ color: 'var(--color-text)' }}>
-        {def?.label || data.key}
+        {def?.label}
         {def?.locked && <span title="Fuel locked" className="ml-1">🔒</span>}
       </td>
       <td className="py-2 px-2">
@@ -43,7 +67,7 @@ export function EquipmentRow({ def, data, onChange, densities, disabled = false,
           {fuelLocked ? null : (
             <select
               value={data.fuel}
-              onChange={(e) => onChange({ ...data, fuel: e.target.value })}
+              onChange={(e) => onChange({ ...data, fuel: e.target.value as FuelKey })}
               className="ml-1 px-2 py-1.5 rounded-lg text-xs font-medium cursor-pointer"
               style={{
                 background: 'var(--color-surface)',
@@ -64,7 +88,7 @@ export function EquipmentRow({ def, data, onChange, densities, disabled = false,
             style={readonlyCellStyle}
             aria-label={`${def?.label} start (m³)`}
           >
-            {data.start === '' || data.start == null ? '\u2014' : data.start}
+            {data.start === '' || data.start == null ? '—' : data.start}
           </div>
         ) : (
           <input
@@ -90,7 +114,7 @@ export function EquipmentRow({ def, data, onChange, densities, disabled = false,
             style={readonlyCellStyle}
             aria-label={`${def?.label} end (m³)`}
           >
-            {data.end === '' || data.end == null ? '\u2014' : data.end}
+            {data.end === '' || data.end == null ? '—' : data.end}
           </div>
         ) : (
           <input
@@ -112,7 +136,7 @@ export function EquipmentRow({ def, data, onChange, densities, disabled = false,
       <td className="py-3 px-4 text-right font-mono text-sm" style={{ color: 'var(--color-dim)' }}>{diff}</td>
       <td className="py-3 px-4 text-right font-mono text-sm font-bold">
         <span className={`eq-mt ${isZero ? 'zero' : ''}`}>
-          {isZero ? '\u2014' : formatMT(consumption)}
+          {isZero ? '—' : formatMT(consumption)}
         </span>
       </td>
     </tr>

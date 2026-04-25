@@ -1,4 +1,3 @@
-// @ts-nocheck
 // ManualCarryOverModal — confirms which equipment END values get copied into
 // the target phase's START. Ported from v6 but data-driven over the ship
 // class's equipment list instead of hardcoded DG/boiler keys.
@@ -7,19 +6,25 @@ import { useState } from 'react';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { X } from '../Icons';
+import type { EquipmentDefinition, ShipClass } from '../../types/domain';
 
-export function ManualCarryOverModal({ shipClass, onClose }) {
+interface Props {
+  shipClass: ShipClass | null;
+  onClose: () => void;
+}
+
+export function ManualCarryOverModal({ shipClass, onClose }: Props) {
   const { lastEditedPhase, findNextPhaseFor, applyCarryOver } = useVoyageStore();
   const source = lastEditedPhase;
   const target = source ? findNextPhaseFor(source) : null;
 
   // Start with every equipment selected; user can untick individual rows.
-  const initSelected = () => {
-    const s = {};
+  const initSelected = (): Record<string, boolean> => {
+    const s: Record<string, boolean> = {};
     for (const def of shipClass?.equipment || []) s[def.key] = true;
     return s;
   };
-  const [selected, setSelected] = useState(initSelected);
+  const [selected, setSelected] = useState<Record<string, boolean>>(initSelected);
 
   // Modal is mounted fresh each time the user opens the FAB (parent toggles
   // `carryOverOpen`), so `useState(initSelected)` runs with the current source
@@ -29,14 +34,14 @@ export function ManualCarryOverModal({ shipClass, onClose }) {
 
   if (!source || !target || !shipClass) return null;
 
-  const hasValue = (def) => {
+  const hasValue = (def: EquipmentDefinition): boolean => {
     const v = source.equipment?.[def.key];
     return v !== '' && v != null;
   };
   const validSelection = shipClass.equipment.some((def) => hasValue(def) && selected[def.key]);
 
   const handleConfirm = () => {
-    const counters = {};
+    const counters: Record<string, string> = {};
     for (const def of shipClass.equipment) {
       const v = source.equipment?.[def.key];
       if (selected[def.key] && v !== '' && v != null) counters[def.key] = v;
@@ -72,7 +77,7 @@ export function ManualCarryOverModal({ shipClass, onClose }) {
           </p>
 
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <Card label="From (END)" value={source.phaseName} />
+            <Card label="From (END)" value={source.phaseName ?? '—'} />
             <Card label="To (START)" value={target.phaseName} />
           </div>
 
@@ -80,7 +85,7 @@ export function ManualCarryOverModal({ shipClass, onClose }) {
             {shipClass.equipment.map((def) => {
               const val = source.equipment?.[def.key];
               const can = hasValue(def);
-              const on  = !!selected[def.key] && can;
+              const on = !!selected[def.key] && can;
               return (
                 <button
                   key={def.key}
@@ -111,7 +116,7 @@ export function ManualCarryOverModal({ shipClass, onClose }) {
                     </span>
                   </div>
                   <span className="font-mono text-[0.78rem]" style={{ color: 'var(--color-dim)' }}>
-                    {can ? `${parseFloat(val).toFixed(1)} m³` : '—'}
+                    {can && val ? `${parseFloat(val).toFixed(1)} m³` : '—'}
                   </span>
                 </button>
               );
@@ -137,7 +142,7 @@ export function ManualCarryOverModal({ shipClass, onClose }) {
   );
 }
 
-function Card({ label, value }) {
+function Card({ label, value }: { label: string; value: string }) {
   return (
     <div
       className="rounded-lg p-3"

@@ -1,39 +1,45 @@
-// @ts-nocheck
 // AddLegModal — opens from VoyageDetail's "+ Add Leg" button (edit mode).
 // Appends a leg to the selected voyage. Defaults the `from` port to the
 // previous leg's `to` port and offers a carry-over of the last counters.
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { voyageRouteLabel } from '../../domain/factories';
 import { X } from '../Icons';
+import type { ShipClass } from '../../types/domain';
 
-export function AddLegModal({ filename, shipClass, onClose }) {
+interface Props {
+  filename: string;
+  shipClass: ShipClass | null;
+  onClose: () => void;
+}
+
+export function AddLegModal({ filename, shipClass, onClose }: Props) {
   const { loadedById, addLeg } = useVoyageStore();
   const voyage = loadedById[filename];
   const lastLeg = voyage?.legs?.[voyage.legs.length - 1] || null;
   const suggestedFrom = useMemo(() => lastLeg?.arrival?.port || '', [lastLeg]);
 
   const [fromPort, setFromPort] = useState(suggestedFrom);
-  const [toPort,   setToPort]   = useState('');
-  const [depDate,  setDepDate]  = useState(lastLeg?.arrival?.date || '');
-  const [arrDate,  setArrDate]  = useState('');
+  const [toPort, setToPort] = useState('');
+  const [depDate, setDepDate] = useState(lastLeg?.arrival?.date || '');
+  const [arrDate, setArrDate] = useState('');
   const [carryOver, setCarryOver] = useState(!!lastLeg);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEscapeKey(onClose);
 
   const canSubmit = !!shipClass && !!voyage;
 
-  function handleSubmit(e) {
+  function handleSubmit(e: FormEvent) {
     e?.preventDefault?.();
-    if (!canSubmit) return;
+    if (!canSubmit || !shipClass) return;
     try {
       addLeg(filename, {
         shipClass,
         fromPort: fromPort.trim(),
-        toPort:   toPort.trim(),
+        toPort: toPort.trim(),
         depDate,
         arrDate,
         carryOverFrom: carryOver ? lastLeg : null,
@@ -41,7 +47,7 @@ export function AddLegModal({ filename, shipClass, onClose }) {
       onClose();
     } catch (err) {
       console.error('[AddLegModal] failed', err);
-      setError(err?.message || 'Failed to add leg.');
+      setError((err as Error)?.message || 'Failed to add leg.');
     }
   }
 

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // TimePicker6Min — HH:MM picker constrained to 6-minute slots.
 //
 // Why not <input type="time" step="360">?
@@ -33,12 +32,12 @@ import { useState } from 'react';
 const MINUTE_SLOTS = [0, 6, 12, 18, 24, 30, 36, 42, 48, 54];
 const HOUR_SLOTS = Array.from({ length: 24 }, (_, i) => i);
 
-const pad2 = (n) => String(n).padStart(2, '0');
+const pad2 = (n: number): string => String(n).padStart(2, '0');
 
 // Parse "HH:MM" → [hourStr, minStr] or ['', ''] on any failure. We keep
 // the parts as strings so the <select value> round-trips cleanly when
 // one side is set and the other isn't.
-function parseParts(hhmm) {
+function parseParts(hhmm: string | null | undefined): [string, string] {
   if (!hhmm || typeof hhmm !== 'string') return ['', ''];
   const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm);
   if (!m) return ['', ''];
@@ -50,12 +49,18 @@ function parseParts(hhmm) {
 
 // Recombine the two halves. Both must be set for us to emit a value;
 // if either is '' we emit '' so downstream validation sees "unset".
-function combine(hh, mm) {
+function combine(hh: string, mm: string): string {
   if (hh === '' || mm === '') return '';
   return `${hh}:${mm}`;
 }
 
-export function TimePicker6Min({ value, onChange, readOnly = false }) {
+interface Props {
+  value: string;
+  onChange: (next: string) => void;
+  readOnly?: boolean;
+}
+
+export function TimePicker6Min({ value, onChange, readOnly = false }: Props) {
   // Seed local state from the incoming value; sync on external changes.
   // When the user picks only one half, the parent's value stays '' but
   // our local half survives — the pick "sticks" visually until the
@@ -66,8 +71,8 @@ export function TimePicker6Min({ value, onChange, readOnly = false }) {
   // because it avoids the double-render cascade and only runs when
   // `value` actually changes externally (file load, etc.) — not on
   // our own '' emissions, which arrive as the same string ''.
-  const [hPart, setHPart] = useState(() => parseParts(value)[0]);
-  const [mPart, setMPart] = useState(() => parseParts(value)[1]);
+  const [hPart, setHPart] = useState<string>(() => parseParts(value)[0]);
+  const [mPart, setMPart] = useState<string>(() => parseParts(value)[1]);
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
     setPrevValue(value);
@@ -76,11 +81,11 @@ export function TimePicker6Min({ value, onChange, readOnly = false }) {
     setMPart(m);
   }
 
-  const pickHour = (h) => {
+  const pickHour = (h: string) => {
     setHPart(h);
     onChange(combine(h, mPart));
   };
-  const pickMinute = (m) => {
+  const pickMinute = (m: string) => {
     setMPart(m);
     onChange(combine(hPart, m));
   };
@@ -91,7 +96,7 @@ export function TimePicker6Min({ value, onChange, readOnly = false }) {
         className="form-input font-mono text-[0.78rem]"
         style={{ background: 'transparent', border: '1px solid transparent', cursor: 'default' }}
       >
-        {value || '\u2014'}
+        {value || '—'}
       </div>
     );
   }

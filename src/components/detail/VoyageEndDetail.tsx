@@ -1,11 +1,15 @@
-// @ts-nocheck
 // VoyageEndDetail — final voyage close-out node (lub-oil + verified totals).
 // Lub-oil is recorded ONLY here per the spec, never in dep/arrival reports.
 
 import { formatMT } from '../../domain/calculations';
 import { voyageRouteLongLabel } from '../../domain/factories';
+import type { Voyage } from '../../types/domain';
 
-export function VoyageEndDetail({ voyage }) {
+interface Props {
+  voyage: Voyage;
+}
+
+export function VoyageEndDetail({ voyage }: Props) {
   const end = voyage.voyageEnd;
   if (!end) {
     return (
@@ -15,7 +19,7 @@ export function VoyageEndDetail({ voyage }) {
     );
   }
 
-  const t = end.totals || {};
+  const t = end.totals || ({} as typeof end.totals);
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -111,7 +115,13 @@ export function VoyageEndDetail({ voyage }) {
   );
 }
 
-function Field({ label, value, mono }) {
+interface FieldProps {
+  label: string;
+  value: string | null | undefined;
+  mono?: boolean;
+}
+
+function Field({ label, value, mono }: FieldProps) {
   return (
     <div>
       <div className="form-label">{label}</div>
@@ -125,7 +135,13 @@ function Field({ label, value, mono }) {
   );
 }
 
-function Mini({ label, value, suffix }) {
+interface MiniProps {
+  label: string;
+  value: string | null | undefined;
+  suffix?: string;
+}
+
+function Mini({ label, value, suffix }: MiniProps) {
   return (
     <div className="mini-row">
       <span className="mr-label">{label}</span>

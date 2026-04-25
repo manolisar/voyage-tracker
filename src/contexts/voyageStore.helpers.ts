@@ -42,6 +42,13 @@ export interface PhaseSource {
   legId: number;
   kind: ReportKind;
   phaseId: number;
+  // EquipmentRow stamps the phase's display name onto the source so the
+  // FAB / modal can render it without re-traversing the voyage.
+  phaseName?: string;
+  // Snapshot of {equipmentKey: endValue} from the source phase — used by
+  // ManualCarryOverModal to drive the per-equipment tickboxes without
+  // re-reading the (potentially stale) draft.
+  equipment?: Record<string, string>;
 }
 
 export interface PhaseTarget {

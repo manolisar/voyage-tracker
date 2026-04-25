@@ -1,13 +1,17 @@
-// @ts-nocheck
 // HelpModal — officer-facing quick reference. Opened from the TopBar "?"
 // button. Workflow-focused, terse; not a feature reference. Each <details>
 // section is independent so readers can scan headings and expand only what
 // they need.
 
+import type { ReactNode } from 'react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { HelpCircle, X } from '../Icons';
 
-export function HelpModal({ onClose }) {
+interface Props {
+  onClose: () => void;
+}
+
+export function HelpModal({ onClose }: Props) {
   useEscapeKey(onClose);
 
   return (
@@ -193,7 +197,7 @@ export function HelpModal({ onClose }) {
   );
 }
 
-function HelpSection({ title, children }) {
+function HelpSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <details
       className="rounded-lg border group"

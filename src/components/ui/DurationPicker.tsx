@@ -1,4 +1,3 @@
-// @ts-nocheck
 // DurationPicker — elapsed-time picker (hours + minutes).
 //
 // Used for Steaming Time in the Voyage Report. The v6/early-v7 field
@@ -29,12 +28,12 @@
 import { useState } from 'react';
 
 const MINUTE_SLOTS = [0, 6, 12, 18, 24, 30, 36, 42, 48, 54];
-const pad2 = (n) => String(n).padStart(2, '0');
+const pad2 = (n: number): string => String(n).padStart(2, '0');
 
 // Parse "H:MM" / "HH:MM" / "HHH:MM" → [hourStr, minStr] or ['', ''].
 // Hour magnitude is unbounded; minutes must be a 6-min slot so the
 // on-disk value round-trips cleanly through the picker.
-function parseParts(hhmm) {
+function parseParts(hhmm: string | null | undefined): [string, string] {
   if (!hhmm || typeof hhmm !== 'string') return ['', ''];
   const m = /^(\d+):(\d{2})$/.exec(hhmm);
   if (!m) return ['', ''];
@@ -46,7 +45,7 @@ function parseParts(hhmm) {
 }
 
 // Both halves must be set for a value; one-sided is empty downstream.
-function combine(hh, mm) {
+function combine(hh: string, mm: string): string {
   if (hh === '' || mm === '') return '';
   return `${hh}:${mm}`;
 }
@@ -54,7 +53,7 @@ function combine(hh, mm) {
 // Coerce a keystroke into a non-negative integer string. Strips
 // non-digits, rejects NaN, treats empty as empty. Leading zeros are
 // stripped by String(Number) except for '0' itself.
-function sanitizeHours(raw) {
+function sanitizeHours(raw: string | null | undefined): string {
   if (raw === '' || raw == null) return '';
   const digits = String(raw).replace(/\D+/g, '');
   if (digits === '') return '';
@@ -62,23 +61,29 @@ function sanitizeHours(raw) {
   return Number.isFinite(n) && n >= 0 ? String(n) : '';
 }
 
-export function DurationPicker({ value, onChange, readOnly = false }) {
+interface Props {
+  value: string;
+  onChange: (next: string) => void;
+  readOnly?: boolean;
+}
+
+export function DurationPicker({ value, onChange, readOnly = false }: Props) {
   const incoming = parseParts(value);
-  const [hPart, setHPart] = useState(incoming[0]);
-  const [mPart, setMPart] = useState(incoming[1]);
-  const [prevParts, setPrevParts] = useState(incoming);
+  const [hPart, setHPart] = useState<string>(incoming[0]);
+  const [mPart, setMPart] = useState<string>(incoming[1]);
+  const [prevParts, setPrevParts] = useState<[string, string]>(incoming);
   if (incoming[0] !== prevParts[0] || incoming[1] !== prevParts[1]) {
     setPrevParts(incoming);
     setHPart(incoming[0]);
     setMPart(incoming[1]);
   }
 
-  const pickHour = (raw) => {
+  const pickHour = (raw: string) => {
     const h = sanitizeHours(raw);
     setHPart(h);
     onChange(combine(h, mPart));
   };
-  const pickMinute = (m) => {
+  const pickMinute = (m: string) => {
     setMPart(m);
     onChange(combine(hPart, m));
   };
@@ -89,7 +94,7 @@ export function DurationPicker({ value, onChange, readOnly = false }) {
         className="form-input font-mono text-[0.78rem]"
         style={{ background: 'transparent', border: '1px solid transparent', cursor: 'default' }}
       >
-        {value || '\u2014'}
+        {value || '—'}
       </div>
     );
   }

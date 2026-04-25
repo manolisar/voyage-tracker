@@ -1,4 +1,3 @@
-// @ts-nocheck
 // DetailPane — routes the currently-selected tree node to the correct detail
 // component. Uses VoyageStoreContext for selection + loaded data, and the
 // session context for editMode (flipped by the TopBar "Enable Edit" button).
@@ -25,8 +24,17 @@ import { ReportForm } from '../voyage/ReportForm';
 import { VoyageReportSection } from '../voyage/VoyageReportSection';
 import { FloatingCarryOverButton } from '../ui/FloatingCarryOverButton';
 import { ManualCarryOverModal } from '../modals/ManualCarryOverModal';
+import type { Report, ReportKind, Ship, ShipClass, Voyage } from '../../types/domain';
 
-export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoyage }) {
+interface Props {
+  ship: Ship | null | undefined;
+  shipClass: ShipClass | null;
+  onAddLeg?: (filename: string) => void;
+  onEndVoyage?: (filename: string) => void;
+  onDeleteVoyage?: (filename: string) => void;
+}
+
+export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoyage }: Props) {
   const { editMode } = useSession();
   const {
     selected, loadedById, loadVoyage, loadingFiles, updateVoyage,
@@ -47,65 +55,78 @@ export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoy
   // LATEST phase whose equipment END value changed — when we find one, we
   // stamp it into `lastEditedPhase` so the floating carry-over button knows
   // where to carry from.
-  const onReportChange = useCallback((filename, legId, kind, newReport) => {
-    updateVoyage(filename, (v) => {
-      const oldLeg = v.legs.find((l) => l.id === legId);
-      const oldReport = oldLeg?.[kind];
-      // Find the phase whose equipment END value just changed, if any.
-      if (oldReport?.phases && newReport?.phases) {
-        for (const newPhase of newReport.phases) {
-          const oldPhase = oldReport.phases.find((p) => p.id === newPhase.id);
-          if (!oldPhase) continue;
-          let changedEndKey = null;
-          for (const eqKey of Object.keys(newPhase.equipment || {})) {
-            const newEnd = newPhase.equipment?.[eqKey]?.end;
-            const oldEnd = oldPhase.equipment?.[eqKey]?.end;
-            if (newEnd !== oldEnd) { changedEndKey = eqKey; break; }
-          }
-          if (changedEndKey) {
-            // Build the equipment snapshot from the NEW phase so the modal
-            // previews fresh values.
-            const equipmentSnapshot = {};
-            for (const [k, eq] of Object.entries(newPhase.equipment || {})) {
-              if (eq?.end !== '' && eq?.end != null) equipmentSnapshot[k] = eq.end;
+  const onReportChange = useCallback(
+    (filename: string, legId: number, kind: ReportKind, newReport: Report) => {
+      updateVoyage(filename, (v) => {
+        const oldLeg = v.legs.find((l) => l.id === legId);
+        const oldReport = oldLeg?.[kind];
+        // Find the phase whose equipment END value just changed, if any.
+        if (oldReport?.phases && newReport?.phases) {
+          for (const newPhase of newReport.phases) {
+            const oldPhase = oldReport.phases.find((p) => p.id === newPhase.id);
+            if (!oldPhase) continue;
+            let changedEndKey: string | null = null;
+            for (const eqKey of Object.keys(newPhase.equipment || {})) {
+              const newEnd = newPhase.equipment?.[eqKey]?.end;
+              const oldEnd = oldPhase.equipment?.[eqKey]?.end;
+              if (newEnd !== oldEnd) {
+                changedEndKey = eqKey;
+                break;
+              }
             }
-            trackPhaseEnd({
-              filename, legId, kind,
-              phaseId: newPhase.id,
-              phaseName: newPhase.name || (kind === 'departure' ? 'Departure Phase' : 'Arrival Phase'),
-              equipment: equipmentSnapshot,
-            });
-            break;
+            if (changedEndKey) {
+              // Snapshot end values from the NEW phase so the carry-over
+              // modal previews fresh numbers.
+              const equipmentSnapshot: Record<string, string> = {};
+              for (const [k, eq] of Object.entries(newPhase.equipment || {})) {
+                if (eq?.end !== '' && eq?.end != null) equipmentSnapshot[k] = eq.end;
+              }
+              trackPhaseEnd({
+                filename,
+                legId,
+                kind,
+                phaseId: newPhase.id,
+                phaseName:
+                  newPhase.name || (kind === 'departure' ? 'Departure Phase' : 'Arrival Phase'),
+                equipment: equipmentSnapshot,
+              });
+              break;
+            }
           }
         }
-      }
-      return {
-        ...v,
-        legs: v.legs.map((l) => l.id === legId ? { ...l, [kind]: newReport } : l),
-      };
-    });
-  }, [updateVoyage, trackPhaseEnd]);
+        return {
+          ...v,
+          legs: v.legs.map((l) => (l.id === legId ? { ...l, [kind]: newReport } : l)),
+        };
+      });
+    },
+    [updateVoyage, trackPhaseEnd],
+  );
 
-  const onVoyageReportChange = useCallback((filename, legId, newVR) => {
-    updateVoyage(filename, (v) => ({
-      ...v,
-      legs: v.legs.map((l) => l.id === legId ? { ...l, voyageReport: newVR } : l),
-    }));
-  }, [updateVoyage]);
+  const onVoyageReportChange = useCallback(
+    (filename: string, legId: number, newVR: Voyage['legs'][number]['voyageReport']) => {
+      updateVoyage(filename, (v) => ({
+        ...v,
+        legs: v.legs.map((l) => (l.id === legId ? { ...l, voyageReport: newVR } : l)),
+      }));
+    },
+    [updateVoyage],
+  );
 
   // Seed an empty voyageReport on first visit for legacy legs (pre-v7 imports).
   // Must run in an effect — doing this during render would trigger a setState
   // on the store provider while DetailPane is still rendering.
-  const voyageForEffect = loadedById[selected?.filename];
+  const voyageForEffect = selected?.filename ? loadedById[selected.filename] : undefined;
   const legForEffect = voyageForEffect?.legs?.find((l) => l.id === selected?.legId);
-  const needsVRSeed = editMode
-    && selected?.kind === 'voyageReport'
-    && legForEffect
-    && !legForEffect.voyageReport;
+  const needsVRSeed =
+    editMode &&
+    selected?.kind === 'voyageReport' &&
+    legForEffect &&
+    !legForEffect.voyageReport;
   useEffect(() => {
-    if (!needsVRSeed) return;
+    if (!needsVRSeed || !voyageForEffect?.filename || !legForEffect) return;
     onVoyageReportChange(voyageForEffect.filename, legForEffect.id, defaultVoyageReport());
-  }, [needsVRSeed, voyageForEffect?.filename, legForEffect?.id, onVoyageReportChange]);
+  }, [needsVRSeed, voyageForEffect?.filename, legForEffect, onVoyageReportChange]);
 
   if (!selected) return <EmptyState ship={ship} />;
 
@@ -116,6 +137,14 @@ export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoy
     return (
       <div className="max-w-3xl mx-auto p-6 text-center" style={{ color: 'var(--color-dim)' }}>
         {isLoading ? 'Loading voyage…' : 'Voyage not loaded.'}
+      </div>
+    );
+  }
+
+  if (!shipClass) {
+    return (
+      <div className="max-w-3xl mx-auto p-6 text-center" style={{ color: 'var(--color-dim)' }}>
+        Loading ship class…
       </div>
     );
   }
@@ -150,7 +179,7 @@ export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoy
   const densities = voyage.densities || defaultDensities(shipClass);
 
   if (selected.kind === 'departure' || selected.kind === 'arrival') {
-    if (editMode && shipClass) {
+    if (editMode) {
       const report = leg[selected.kind];
       if (!report) {
         return (
@@ -159,13 +188,16 @@ export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoy
           </div>
         );
       }
+      const filename = voyage.filename ?? '';
       return (
         <div className="max-w-5xl mx-auto">
           <ReportForm
             report={report}
             shipClass={shipClass}
             densities={densities}
-            onChange={(newReport) => onReportChange(voyage.filename, leg.id, selected.kind, newReport)}
+            onChange={(newReport: Report) =>
+              onReportChange(filename, leg.id, selected.kind as ReportKind, newReport)
+            }
           />
           <FloatingCarryOverButton onClick={() => setCarryOverOpen(true)} />
           {carryOverOpen && (
@@ -193,6 +225,7 @@ export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoy
     // throwaway default so the form has something to bind to.
     const vr = leg.voyageReport || defaultVoyageReport();
     if (editMode) {
+      const filename = voyage.filename ?? '';
       return (
         <div className="max-w-5xl mx-auto">
           <VoyageReportSection
@@ -201,7 +234,9 @@ export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoy
             arrPort={leg.arrival?.port}
             depDate={leg.departure?.date}
             arrDate={leg.arrival?.date}
-            onChange={(newVR) => onVoyageReportChange(voyage.filename, leg.id, newVR)}
+            onChange={(newVR: Voyage['legs'][number]['voyageReport']) =>
+              onVoyageReportChange(filename, leg.id, newVR)
+            }
             onDelete={null}
           />
         </div>

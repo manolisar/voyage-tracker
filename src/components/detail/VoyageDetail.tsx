@@ -1,30 +1,31 @@
-// @ts-nocheck
 // VoyageDetail — the "Voyage Detail" node in the tree.
 // Cruise card (name, dates, status) + Cruise Summary cards (fuel/water/chem/lube)
 // + Densities + Legs list.
 
-import { calcVoyageTotals, formatMT } from '../../domain/calculations';
+import { calcVoyageTotals, type FuelTotals } from '../../domain/calculations';
+import { formatMT } from '../../domain/calculations';
 import { voyageRouteLongLabel } from '../../domain/factories';
 import { Trash2 } from '../Icons';
+import type { FuelKey, Leg, Ship, ShipClass, Voyage } from '../../types/domain';
 
-const FUEL_COLS = [
+const FUEL_COLS: { key: keyof FuelTotals & string; label: FuelKey }[] = [
   { key: 'hfo',  label: 'HFO'  },
   { key: 'mgo',  label: 'MGO'  },
   { key: 'lsfo', label: 'LSFO' },
 ];
 
-function lastReportRob(voyage) {
+function lastReportRob(voyage: Voyage): Record<string, string> {
   // Walk legs in order; pick the latest arrival ROB, falling back to last
   // departure ROB. Used for the "ROB" hint on the fuel summary cards.
-  const reports = [];
+  const reports: Record<string, string>[] = [];
   for (const leg of voyage.legs || []) {
     if (leg.departure?.rob) reports.push(leg.departure.rob);
-    if (leg.arrival?.rob)   reports.push(leg.arrival.rob);
+    if (leg.arrival?.rob) reports.push(leg.arrival.rob);
   }
   return reports[reports.length - 1] || {};
 }
 
-function lastFreshWater(voyage) {
+function lastFreshWater(voyage: Voyage) {
   for (let i = (voyage.legs || []).length - 1; i >= 0; i--) {
     const fw = voyage.legs[i].arrival?.freshWater;
     if (fw && (fw.rob || fw.production || fw.consumption)) return fw;
@@ -32,7 +33,7 @@ function lastFreshWater(voyage) {
   return null;
 }
 
-function lastAep(voyage) {
+function lastAep(voyage: Voyage) {
   for (let i = (voyage.legs || []).length - 1; i >= 0; i--) {
     const a = voyage.legs[i].arrival?.aep;
     if (a && (a.alkaliCons || a.alkaliRob)) return a;
@@ -40,7 +41,25 @@ function lastAep(voyage) {
   return null;
 }
 
-export function VoyageDetail({ voyage, shipClass, ship, editMode, onAddLeg, onEndVoyage, onDeleteVoyage }) {
+interface Props {
+  voyage: Voyage;
+  shipClass: ShipClass;
+  ship: Ship | null | undefined;
+  editMode: boolean;
+  onAddLeg?: (filename: string) => void;
+  onEndVoyage?: (filename: string) => void;
+  onDeleteVoyage?: (filename: string) => void;
+}
+
+export function VoyageDetail({
+  voyage,
+  shipClass,
+  ship,
+  editMode,
+  onAddLeg,
+  onEndVoyage,
+  onDeleteVoyage,
+}: Props) {
   const totals = calcVoyageTotals(voyage, shipClass);
   const ended = !!voyage.voyageEnd;
   const rob = lastReportRob(voyage);
@@ -48,7 +67,7 @@ export function VoyageDetail({ voyage, shipClass, ship, editMode, onAddLeg, onEn
   const aep = lastAep(voyage);
   const lubeOil = voyage.voyageEnd?.lubeOil || null;
 
-  const filename = voyage.filename;
+  const filename = voyage.filename ?? '';
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -239,7 +258,14 @@ export function VoyageDetail({ voyage, shipClass, ship, editMode, onAddLeg, onEn
   );
 }
 
-function Field({ label, value, mono, hint }) {
+interface FieldProps {
+  label: string;
+  value: string | null | undefined;
+  mono?: boolean;
+  hint?: string;
+}
+
+function Field({ label, value, mono, hint }: FieldProps) {
   return (
     <div>
       <div className="form-label">{label}</div>
@@ -258,7 +284,13 @@ function Field({ label, value, mono, hint }) {
   );
 }
 
-function Mini({ label, value, suffix }) {
+interface MiniProps {
+  label: string;
+  value: string | null | undefined;
+  suffix?: string;
+}
+
+function Mini({ label, value, suffix }: MiniProps) {
   return (
     <div className="mini-row">
       <span className="mr-label">{label}</span>
@@ -269,7 +301,7 @@ function Mini({ label, value, suffix }) {
   );
 }
 
-function LegRow({ leg, index }) {
+function LegRow({ leg, index }: { leg: Leg; index: number }) {
   const dep = leg.departure?.port?.split(',')[0]?.trim() || 'Dep';
   const arr = leg.arrival?.port?.split(',')[0]?.trim() || 'Arr';
   return (

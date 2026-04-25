@@ -1,4 +1,3 @@
-// @ts-nocheck
 // ReportDetail — read-only Departure/Arrival summary.
 // v7: renders the exact same <ReportForm> used in edit mode but with
 // `readOnly`. This guarantees pixel-level parity between view and edit —
@@ -9,8 +8,16 @@
 
 import { defaultDensities } from '../../domain/shipClass';
 import { ReportForm } from '../voyage/ReportForm';
+import type { Leg, ReportKind, ShipClass, Voyage } from '../../types/domain';
 
-export function ReportDetail({ voyage, leg, kind, shipClass }) {
+interface Props {
+  voyage: Voyage;
+  leg: Leg | null | undefined;
+  kind: ReportKind;
+  shipClass: ShipClass;
+}
+
+export function ReportDetail({ voyage, leg, kind, shipClass }: Props) {
   const report = leg?.[kind];
   if (!report) {
     return (

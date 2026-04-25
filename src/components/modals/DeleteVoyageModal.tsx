@@ -1,4 +1,3 @@
-// @ts-nocheck
 // DeleteVoyageModal — confirmation before VoyageStore.deleteVoyage removes
 // the on-disk JSON file. Destructive; there is no undo.
 
@@ -8,12 +7,17 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { voyageRouteLongLabel } from '../../domain/factories';
 import { X, AlertTriangle } from '../Icons';
 
-export function DeleteVoyageModal({ filename, onClose }) {
+interface Props {
+  filename: string;
+  onClose: () => void;
+}
+
+export function DeleteVoyageModal({ filename, onClose }: Props) {
   const { loadedById, voyages, deleteVoyage } = useVoyageStore();
   const voyage = loadedById[filename];
   const entry = voyages.find((v) => v.filename === filename) || null;
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEscapeKey(onClose, busy);
 
@@ -32,7 +36,7 @@ export function DeleteVoyageModal({ filename, onClose }) {
       onClose();
     } catch (err) {
       console.error('[DeleteVoyageModal] delete failed', err);
-      setError(err?.message || 'Failed to delete voyage.');
+      setError((err as Error)?.message || 'Failed to delete voyage.');
       setBusy(false);
     }
   }

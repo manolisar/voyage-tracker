@@ -1,11 +1,15 @@
-// @ts-nocheck
 // VoyageReportDetail — read-only Voyage Report.
 // Renders the exact same <VoyageReportSection> used in edit mode but with
 // `readOnly`, guaranteeing pixel-level parity between view and edit.
 
 import { VoyageReportSection } from '../voyage/VoyageReportSection';
+import type { Leg } from '../../types/domain';
 
-export function VoyageReportDetail({ leg }) {
+interface Props {
+  leg: Leg | null | undefined;
+}
+
+export function VoyageReportDetail({ leg }: Props) {
   const vr = leg?.voyageReport;
   if (!vr) {
     return (
@@ -20,6 +24,7 @@ export function VoyageReportDetail({ leg }) {
       <VoyageReportSection
         voyageReport={vr}
         onChange={() => {}}
+        onDelete={() => {}}
         depPort={leg.departure?.port}
         arrPort={leg.arrival?.port}
         depDate={leg.departure?.date}

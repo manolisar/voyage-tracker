@@ -1,9 +1,13 @@
-// @ts-nocheck
 // EmptyState — shown in the detail pane when nothing is selected.
 
 import { Anchor, FileText } from '../Icons';
+import type { Ship } from '../../types/domain';
 
-export function EmptyState({ ship }) {
+interface Props {
+  ship: Ship | null | undefined;
+}
+
+export function EmptyState({ ship }: Props) {
   return (
     <div className="empty-state">
       <div className="empty-state-mark" aria-hidden="true">

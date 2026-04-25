@@ -1,4 +1,3 @@
-// @ts-nocheck
 // PhaseSection — one phase block (port / sea / standby) inside a report.
 // v7 refactor:
 //   - equipment list comes from `shipClass.equipment` (no hardcoded keys).
@@ -9,32 +8,52 @@ import { calcConsumption } from '../../domain/calculations';
 import { PHASE_TYPES } from '../../domain/constants';
 import { X } from '../Icons';
 import { EquipmentRow } from './EquipmentRow';
+import type { EquipmentReading, FuelKey, Phase, ShipClass } from '../../types/domain';
 
-const FUEL_COLORS = {
-  HFO:  { dot: 'var(--color-hfo-band)',  text: 'var(--color-hfo)'  },
-  MGO:  { dot: 'var(--color-mgo-band)',  text: 'var(--color-mgo)'  },
+const FUEL_COLORS: Record<FuelKey, { dot: string; text: string }> = {
+  HFO: { dot: 'var(--color-hfo-band)', text: 'var(--color-hfo)' },
+  MGO: { dot: 'var(--color-mgo-band)', text: 'var(--color-mgo)' },
   LSFO: { dot: 'var(--color-lsfo-band)', text: 'var(--color-lsfo)' },
 };
 
-function phaseClass(type) {
+function phaseClass(type: string): string {
   if (type === PHASE_TYPES.STANDBY) return 'phase-standby';
-  if (type === PHASE_TYPES.SEA)     return 'phase-sea';
+  if (type === PHASE_TYPES.SEA) return 'phase-sea';
   return 'phase-port';
 }
-function phaseIcon(type) {
-  if (type === PHASE_TYPES.STANDBY) return '\u2693';      // ⚓
-  if (type === PHASE_TYPES.SEA)     return '\uD83C\uDF0A'; // 🌊
-  return '\uD83C\uDFED';                                   // 🏭
+function phaseIcon(type: string): string {
+  if (type === PHASE_TYPES.STANDBY) return '⚓'; // ⚓
+  if (type === PHASE_TYPES.SEA) return '🌊'; // 🌊
+  return '🏭'; // 🏭
 }
-function phaseLabel(type) {
+function phaseLabel(type: string): string {
   if (type === PHASE_TYPES.STANDBY) return 'STANDBY';
-  if (type === PHASE_TYPES.SEA)     return 'SEA';
+  if (type === PHASE_TYPES.SEA) return 'SEA';
   return 'PORT';
 }
-function phaseTagClass(type) {
+function phaseTagClass(type: string): string {
   if (type === PHASE_TYPES.STANDBY) return 'ph-tag ph-tag-standby';
-  if (type === PHASE_TYPES.SEA)     return 'ph-tag ph-tag-sea';
+  if (type === PHASE_TYPES.SEA) return 'ph-tag ph-tag-sea';
   return 'ph-tag ph-tag-port';
+}
+
+type FuelTotals = Record<FuelKey, number>;
+
+interface CumulativeTotals {
+  engineCumulative: FuelTotals;
+  boilerCumulative: FuelTotals;
+}
+
+interface Props {
+  phase: Phase;
+  shipClass: ShipClass;
+  onChange: (next: Phase) => void;
+  onDelete?: () => void;
+  canDelete?: boolean;
+  densities: Partial<Record<FuelKey, number>>;
+  showTotals?: boolean;
+  cumulativeTotals?: CumulativeTotals | null;
+  readOnly?: boolean;
 }
 
 export function PhaseSection({
@@ -45,35 +64,35 @@ export function PhaseSection({
   canDelete,
   densities,
   showTotals,
-  cumulativeTotals, // optional — { engineCumulative, boilerCumulative }
+  cumulativeTotals,
   readOnly = false,
-}) {
-  const handleEqChange = (key, value) => {
+}: Props) {
+  const handleEqChange = (key: string, value: EquipmentReading) => {
     onChange({ ...phase, equipment: { ...phase.equipment, [key]: value } });
   };
 
   // Per-phase totals broken out by engine/boiler using the data-driven category.
-  const engineTotals = { HFO: 0, MGO: 0, LSFO: 0 };
-  const boilerTotals = { HFO: 0, MGO: 0, LSFO: 0 };
+  const engineTotals: FuelTotals = { HFO: 0, MGO: 0, LSFO: 0 };
+  const boilerTotals: FuelTotals = { HFO: 0, MGO: 0, LSFO: 0 };
   for (const def of shipClass.equipment) {
     const eq = phase.equipment?.[def.key];
     if (!eq) continue;
     const cons = calcConsumption(eq.start, eq.end, eq.fuel, densities);
     if (cons == null) continue;
     if (def.category === 'boiler') boilerTotals[eq.fuel] = (boilerTotals[eq.fuel] || 0) + cons;
-    else                            engineTotals[eq.fuel] = (engineTotals[eq.fuel] || 0) + cons;
+    else engineTotals[eq.fuel] = (engineTotals[eq.fuel] || 0) + cons;
   }
 
   const displayEngine = cumulativeTotals?.engineCumulative ?? engineTotals;
   const displayBoiler = cumulativeTotals?.boilerCumulative ?? boilerTotals;
 
-  const engineSum  = displayEngine.HFO + displayEngine.MGO + displayEngine.LSFO;
-  const boilerSum  = displayBoiler.HFO + displayBoiler.MGO + displayBoiler.LSFO;
+  const engineSum = displayEngine.HFO + displayEngine.MGO + displayEngine.LSFO;
+  const boilerSum = displayBoiler.HFO + displayBoiler.MGO + displayBoiler.LSFO;
   const phaseGrand = engineSum + boilerSum;
-  const isStandby  = phase.type === PHASE_TYPES.STANDBY;
+  const isStandby = phase.type === PHASE_TYPES.STANDBY;
 
-  const renderFuelLines = (fuelTotals) => {
-    const fuels = ['HFO', 'MGO', 'LSFO'].filter((f) => fuelTotals[f] > 0);
+  const renderFuelLines = (fuelTotals: FuelTotals) => {
+    const fuels = (['HFO', 'MGO', 'LSFO'] as FuelKey[]).filter((f) => fuelTotals[f] > 0);
     if (fuels.length === 0) return <div className="pt-noval">No consumption</div>;
     return fuels.map((f) => (
       <div key={f} className="pt-line">
@@ -99,7 +118,7 @@ export function PhaseSection({
               className="phase-title-input"
               style={{ background: 'transparent', border: '1px solid transparent', cursor: 'default' }}
             >
-              {phase.name || '\u2014'}
+              {phase.name || '—'}
             </span>
           ) : (
             <input
@@ -166,16 +185,16 @@ export function PhaseSection({
         <>
           <div className={`ptotals ${isStandby ? 'cols-2' : ''}`}>
             <div className="pt-block">
-              <div className="pt-head">{'\u2699\uFE0F'} Engine</div>
+              <div className="pt-head">{'⚙️'} Engine</div>
               {renderFuelLines(displayEngine)}
             </div>
             <div className="pt-block">
-              <div className="pt-head">{'\uD83D\uDD25'} Boiler</div>
+              <div className="pt-head">{'🔥'} Boiler</div>
               {renderFuelLines(displayBoiler)}
             </div>
             {!isStandby && (
               <div className="pt-block">
-                <div className="pt-head">{'\u03A3'} Phase Total</div>
+                <div className="pt-head">{'Σ'} Phase Total</div>
                 {phaseGrand > 0 ? (
                   <div className="pt-line">
                     <span className="pt-label">All</span>
@@ -203,7 +222,7 @@ export function PhaseSection({
                 value={phase.remarks || ''}
                 onChange={(e) => onChange({ ...phase, remarks: e.target.value })}
                 placeholder="Enter remarks…"
-                rows="2"
+                rows={2}
                 className="w-full bg-transparent border-none resize-none text-sm rounded"
                 style={{ fontStyle: 'italic', color: 'inherit' }}
               />

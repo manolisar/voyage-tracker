@@ -1,4 +1,3 @@
-// @ts-nocheck
 // LandingScreen — no-auth pivot version.
 //
 // Three-step flow driven by local state:
@@ -19,7 +18,7 @@
 // the name+role stamp is purely for attribution.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { loadShips } from '../../domain/shipClass';
-import { EDITOR_ROLES, EDITOR_ROLE_LABELS } from '../../domain/constants';
+import { EDITOR_ROLES, EDITOR_ROLE_LABELS, type EditorRole } from '../../domain/constants';
 import { useSession } from '../../hooks/useSession';
 import {
   isFileSystemAccessSupported,
@@ -29,24 +28,38 @@ import {
   getHandleForShip,
 } from '../../storage/local/fsHandle';
 import { Anchor } from '../Icons';
+import type { Ship } from '../../types/domain';
 
-const STEP_SHIP     = 0;
+const STEP_SHIP = 0;
 const STEP_IDENTIFY = 1;
-const STEP_FOLDER   = 2;
+const STEP_FOLDER = 2;
+
+type Step = typeof STEP_SHIP | typeof STEP_IDENTIFY | typeof STEP_FOLDER;
+type FolderStatus = 'checking' | 'ready' | 'reconnect' | 'pick' | 'unsupported';
+type FolderBusy = 'pick' | 'reconnect' | null;
+
+interface FolderState {
+  status: FolderStatus;
+  error: string | null;
+}
+
+function isEditorRole(value: string): value is EditorRole {
+  return (Object.values(EDITOR_ROLES) as string[]).includes(value);
+}
 
 export function LandingScreen() {
   const { startSession } = useSession();
 
-  const [ships, setShips] = useState([]);
-  const [shipsError, setShipsError] = useState(null);
+  const [ships, setShips] = useState<Ship[]>([]);
+  const [shipsError, setShipsError] = useState<string | null>(null);
 
-  const [step, setStep] = useState(STEP_SHIP);
-  const [shipId, setShipId] = useState(null);
+  const [step, setStep] = useState<Step>(STEP_SHIP);
+  const [shipId, setShipId] = useState<string | null>(null);
   const [userName, setUserName] = useState('');
-  const [role, setRole] = useState(EDITOR_ROLES.CHIEF);
+  const [role, setRole] = useState<EditorRole>(EDITOR_ROLES.CHIEF);
 
-  const [folderState, setFolderState] = useState({ status: 'checking', error: null });
-  const [folderBusy, setFolderBusy] = useState(null); // 'pick' | 'reconnect' | null
+  const [folderState, setFolderState] = useState<FolderState>({ status: 'checking', error: null });
+  const [folderBusy, setFolderBusy] = useState<FolderBusy>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const fsaSupported = useMemo(() => isFileSystemAccessSupported(), []);
@@ -55,9 +68,11 @@ export function LandingScreen() {
   useEffect(() => {
     let alive = true;
     loadShips()
-      .then((data) => alive && setShips((data.ships || []).filter((s) => s.active)))
-      .catch((e) => alive && setShipsError(`Failed to load ships: ${e.message}`));
-    return () => { alive = false; };
+      .then((data) => alive && setShips(data.filter((s) => s.active)))
+      .catch((e) => alive && setShipsError(`Failed to load ships: ${(e as Error).message}`));
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const selectedShip = useMemo(
@@ -65,11 +80,7 @@ export function LandingScreen() {
     [ships, shipId],
   );
 
-  // When we arrive at the folder step, probe what we've got. If a handle is
-  // already persisted AND 'granted', skip the picker. If persisted but in
-  // 'prompt' state, offer a one-click "Connect" that re-permissions silently
-  // on Chromium when the user gesture is the button click. If nothing is
-  // stored, offer the full showDirectoryPicker.
+  // When we arrive at the folder step, probe what we've got.
   useEffect(() => {
     if (step !== STEP_FOLDER || !shipId) return;
     let alive = true;
@@ -90,10 +101,12 @@ export function LandingScreen() {
         }
         if (alive) setFolderState({ status: 'pick', error: null });
       } catch (e) {
-        if (alive) setFolderState({ status: 'pick', error: e.message });
+        if (alive) setFolderState({ status: 'pick', error: (e as Error).message });
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [step, shipId, fsaSupported]);
 
   const handlePickFolder = useCallback(async () => {
@@ -105,9 +118,10 @@ export function LandingScreen() {
       setFolderState({ status: 'ready', error: null });
     } catch (e) {
       console.error('[landing] pick-folder failed', e);
-      const msg = e?.name === 'AbortError'
+      const err = e as Error;
+      const msg = err?.name === 'AbortError'
         ? 'Folder picker was cancelled or blocked. Please try again.'
-        : `${e?.name || 'Error'}: ${e?.message || 'Could not open folder picker'}`;
+        : `${err?.name || 'Error'}: ${err?.message || 'Could not open folder picker'}`;
       setFolderState({ status: 'pick', error: msg });
     } finally {
       setFolderBusy(null);
@@ -123,9 +137,10 @@ export function LandingScreen() {
       setFolderState({ status: 'ready', error: null });
     } catch (e) {
       console.error('[landing] reconnect failed', e);
-      const msg = e?.name === 'AbortError'
+      const err = e as Error;
+      const msg = err?.name === 'AbortError'
         ? 'Reconnect was cancelled or blocked. Please try again.'
-        : e?.message || 'Could not reconnect to folder';
+        : err?.message || 'Could not reconnect to folder';
       setFolderState({ status: 'reconnect', error: msg });
     } finally {
       setFolderBusy(null);
@@ -133,11 +148,13 @@ export function LandingScreen() {
   }, [shipId, folderBusy]);
 
   const canEnter =
-    shipId && userName.trim().length > 0 && Object.values(EDITOR_ROLES).includes(role)
-    && folderState.status === 'ready';
+    !!shipId &&
+    userName.trim().length > 0 &&
+    isEditorRole(role) &&
+    folderState.status === 'ready';
 
   const handleEnter = useCallback(async () => {
-    if (!canEnter || submitting) return;
+    if (!canEnter || submitting || !shipId) return;
     setSubmitting(true);
     try {
       startSession({ shipId, userName: userName.trim(), role });
@@ -179,7 +196,10 @@ export function LandingScreen() {
             ships={ships}
             shipsError={shipsError}
             shipId={shipId}
-            onPick={(id) => { setShipId(id); setStep(STEP_IDENTIFY); }}
+            onPick={(id) => {
+              setShipId(id);
+              setStep(STEP_IDENTIFY);
+            }}
           />
         )}
 
@@ -219,7 +239,7 @@ export function LandingScreen() {
   );
 }
 
-function StepBadge({ step }) {
+function StepBadge({ step }: { step: Step }) {
   const label = step === STEP_SHIP ? '1 / 3  Ship'
               : step === STEP_IDENTIFY ? '2 / 3  Identify'
               : '3 / 3  Folder';
@@ -233,7 +253,14 @@ function StepBadge({ step }) {
   );
 }
 
-function ShipPickerStep({ ships, shipsError, shipId, onPick }) {
+interface ShipPickerStepProps {
+  ships: Ship[];
+  shipsError: string | null;
+  shipId: string | null;
+  onPick: (id: string) => void;
+}
+
+function ShipPickerStep({ ships, shipsError, shipId, onPick }: ShipPickerStepProps) {
   if (shipsError) {
     return (
       <div role="alert" className="p-3 rounded-lg text-sm"
@@ -289,11 +316,20 @@ function ShipPickerStep({ ships, shipsError, shipId, onPick }) {
   );
 }
 
+interface IdentifyStepProps {
+  selectedShip: Ship | null;
+  userName: string;
+  role: EditorRole;
+  onUserName: (name: string) => void;
+  onRole: (role: EditorRole) => void;
+  onBack: () => void;
+  onContinue: () => void;
+}
+
 function IdentifyStep({
   selectedShip, userName, role, onUserName, onRole, onBack, onContinue,
-}) {
-  const canContinue = userName.trim().length > 0
-    && Object.values(EDITOR_ROLES).includes(role);
+}: IdentifyStepProps) {
+  const canContinue = userName.trim().length > 0 && isEditorRole(role);
   return (
     <>
       <div className="mb-4 p-3 rounded-lg flex items-center gap-3"
@@ -325,7 +361,10 @@ function IdentifyStep({
         id="landing-role"
         className="form-input mb-6"
         value={role}
-        onChange={(e) => onRole(e.target.value)}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (isEditorRole(v)) onRole(v);
+        }}
       >
         {Object.entries(EDITOR_ROLE_LABELS).map(([k, label]) => (
           <option key={k} value={k}>{label}</option>
@@ -354,10 +393,24 @@ function IdentifyStep({
   );
 }
 
+interface FolderStepProps {
+  selectedShip: Ship | null;
+  state: FolderState;
+  busy: FolderBusy;
+  onPick: () => void;
+  onReconnect: () => void;
+  onBack: () => void;
+  onEnter: () => void;
+  canEnter: boolean;
+  submitting: boolean;
+  userName: string;
+  role: EditorRole;
+}
+
 function FolderStep({
   selectedShip, state, busy, onPick, onReconnect, onBack, onEnter,
   canEnter, submitting, userName, role,
-}) {
+}: FolderStepProps) {
   return (
     <>
       <div className="mb-4 p-3 rounded-lg flex items-center gap-3"
@@ -378,7 +431,7 @@ function FolderStep({
         </div>
       </div>
 
-      <FolderStatus
+      <FolderStatusView
         state={state}
         busy={busy}
         shipName={selectedShip?.displayName}
@@ -403,7 +456,15 @@ function FolderStep({
   );
 }
 
-function FolderStatus({ state, busy, shipName, onPick, onReconnect }) {
+interface FolderStatusViewProps {
+  state: FolderState;
+  busy: FolderBusy;
+  shipName: string | undefined;
+  onPick: () => void;
+  onReconnect: () => void;
+}
+
+function FolderStatusView({ state, busy, shipName, onPick, onReconnect }: FolderStatusViewProps) {
   if (state.status === 'checking') {
     return <div className="text-sm" style={{ color: 'var(--color-dim)' }}>Checking folder…</div>;
   }
@@ -412,7 +473,7 @@ function FolderStatus({ state, busy, shipName, onPick, onReconnect }) {
       <div className="p-3 rounded-lg text-sm"
         style={{ background: 'var(--color-mgo-band, #ecfdf5)', color: 'var(--color-mgo, #065f46)' }}>
         <strong>Folder connected.</strong> Voyage files will read/write here.
-        <span className="block text-[0.7rem] mt-1 opacity-80">Use “Change folder” later from Settings to switch.</span>
+        <span className="block text-[0.7rem] mt-1 opacity-80">Use "Change folder" later from Settings to switch.</span>
       </div>
     );
   }

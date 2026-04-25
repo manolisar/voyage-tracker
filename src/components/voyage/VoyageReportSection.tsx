@@ -1,4 +1,3 @@
-// @ts-nocheck
 // VoyageReportSection — Bridge / navigation data per leg.
 // 3 columns: Departure / Sea Passage / Arrival.
 //
@@ -22,19 +21,20 @@ import { useState } from 'react';
 import { ChevronRight, Compass, X } from '../Icons';
 import { TimePicker6Min } from '../ui/TimePicker6Min';
 import { DurationPicker } from '../ui/DurationPicker';
+import type { VoyageReport } from '../../types/domain';
 
 // displayAvg: what to show in the form (em-dash if unknown).
-function displayAvg(distance, time) {
+function displayAvg(distance: string, time: string): string {
   const d = parseFloat(distance);
   const t = parseFloat(time);
   if (d > 0 && t > 0) return (d / t).toFixed(1);
-  return '\u2013';
+  return '–';
 }
 // persistAvg: the string to WRITE back into the voyage report. Same math,
 // but we return '' (not an em-dash) when inputs are incomplete so the JSON
 // stays round-trippable and the read-only detail view doesn't render
 // sentinel glyphs as if they were data.
-function persistAvg(distance, time) {
+function persistAvg(distance: string, time: string): string {
   const d = parseFloat(distance);
   const t = parseFloat(time);
   if (d > 0 && t > 0) return (d / t).toFixed(1);
@@ -42,7 +42,7 @@ function persistAvg(distance, time) {
 }
 
 // Parse "HH:MM" → minutes since midnight, or null if unparseable.
-function parseHHMM(s) {
+function parseHHMM(s: string | null | undefined): number | null {
   if (!s || typeof s !== 'string') return null;
   const m = s.match(/^(\d{1,2}):(\d{2})$/);
   if (!m) return null;
@@ -55,7 +55,10 @@ function parseHHMM(s) {
 // Same-day HH:MM diff in minutes. If `end` < `start` we assume the range
 // wrapped past midnight (rare for Pier→FA or SBE→Berth but cheap to handle).
 // Returns null when either input is missing/invalid or delta is zero.
-function diffMinutesSameDay(startHHMM, endHHMM) {
+function diffMinutesSameDay(
+  startHHMM: string | null | undefined,
+  endHHMM: string | null | undefined,
+): number | null {
   const a = parseHHMM(startHHMM);
   const b = parseHHMM(endHHMM);
   if (a == null || b == null) return null;
@@ -70,7 +73,7 @@ function diffMinutesSameDay(startHHMM, endHHMM) {
 // for wall-clock times), this allows arbitrary hour magnitudes so a
 // 6-day transatlantic "144:30" parses correctly. Returns '' on bad input
 // so persistAvg / displayAvg see the same shape they got before.
-function steamingTimeToDecimalHours(s) {
+function steamingTimeToDecimalHours(s: string | null | undefined): string {
   if (!s || typeof s !== 'string') return '';
   const m = s.match(/^(\d+):(\d{2})$/);
   if (!m) return '';
@@ -83,7 +86,7 @@ function steamingTimeToDecimalHours(s) {
 // Minutes → "HH:mm" for display and persistence. The voyage JSON stores
 // elapsed times in this format (crew-facing logbook notation) — avg-speed
 // math converts it back to decimal hours on the fly.
-function formatMinutes(mins) {
+function formatMinutes(mins: number | null): string {
   if (mins == null) return '';
   const h = Math.floor(mins / 60);
   const m = mins % 60;
@@ -91,7 +94,7 @@ function formatMinutes(mins) {
 }
 
 // Minutes → decimal hours (2dp) for avg-speed math. '' when null.
-function minutesToDecimalHours(mins) {
+function minutesToDecimalHours(mins: number | null): string {
   if (mins == null) return '';
   return (mins / 60).toFixed(2);
 }
@@ -99,20 +102,10 @@ function minutesToDecimalHours(mins) {
 // Recompute derived fields on the voyage report so the stored object is
 // the one of record — the read-only view renders `time` / `avgSpeed` /
 // `averageSpeed` directly without recomputing.
-//
-// Two kinds of derivation:
-//  - Pier→FA / SBE→Berth Time: same-day same-zone HH:MM diffs. Always safe.
-//  - Avg speed (all three cells): distance ÷ time. Pier→FA and SBE→Berth
-//    use the derived times; voyage avg speed uses the MANUALLY entered
-//    Steaming Time (cross-zone auto-derivation is not worth the edge
-//    cases — see the file-header comment).
-//
-// `depDate` / `arrDate` are accepted but no longer used; kept in the
-// signature so the callsites in the component body don't need to change.
-function withDerivedFields(vr) {
+function withDerivedFields(vr: VoyageReport): VoyageReport {
   const pMins = diffMinutesSameDay(vr.departure.sbe, vr.departure.fa);
   const aMins = diffMinutesSameDay(vr.arrival.sbe, vr.arrival.fwe);
-  const sDec  = steamingTimeToDecimalHours(vr.voyage.steamingTime);
+  const sDec = steamingTimeToDecimalHours(vr.voyage.steamingTime);
   return {
     ...vr,
     departure: {
@@ -138,6 +131,19 @@ function withDerivedFields(vr) {
   };
 }
 
+interface Props {
+  voyageReport: VoyageReport;
+  onChange: (next: VoyageReport) => void;
+  onDelete?: (() => void) | null;
+  depPort?: string | null;
+  arrPort?: string | null;
+  depDate?: string | null;
+  arrDate?: string | null;
+  readOnly?: boolean;
+}
+
+type Section = 'departure' | 'voyage' | 'arrival';
+
 export function VoyageReportSection({
   voyageReport,
   onChange,
@@ -147,28 +153,38 @@ export function VoyageReportSection({
   depDate,
   arrDate,
   readOnly = false,
-}) {
+}: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const vr = voyageReport;
 
-  const updateField  = (section, field, value) =>
-    onChange(withDerivedFields({ ...vr, [section]: { ...vr[section], [field]: value } }));
-  const updateNested = (section, sub, field, value) =>
-    onChange(withDerivedFields({
-      ...vr,
-      [section]: { ...vr[section], [sub]: { ...vr[section][sub], [field]: value } },
-    }));
+  const updateField = (section: Section, field: string, value: string) =>
+    onChange(
+      withDerivedFields({
+        ...vr,
+        [section]: { ...vr[section], [field]: value },
+      } as VoyageReport),
+    );
+  const updateNested = (section: Section, sub: string, field: string, value: string) =>
+    onChange(
+      withDerivedFields({
+        ...vr,
+        [section]: {
+          ...vr[section],
+          [sub]: { ...(vr[section] as Record<string, unknown>)[sub] as object, [field]: value },
+        },
+      } as VoyageReport),
+    );
 
   // Pier→FA and SBE→Berth Time fall out of the HH:MM stamps on each side.
   // Steaming Time is manually entered (see file-header comment). All
   // three avg-speed cells are derived.
   const pMins = diffMinutesSameDay(vr.departure.sbe, vr.departure.fa);
   const aMins = diffMinutesSameDay(vr.arrival.sbe, vr.arrival.fwe);
-  const pierToFATime    = formatMinutes(pMins);
-  const sbeToBerthTime  = formatMinutes(aMins);
-  const pierToFASpeed   = displayAvg(vr.departure.pierToFA.distance, minutesToDecimalHours(pMins));
+  const pierToFATime = formatMinutes(pMins);
+  const sbeToBerthTime = formatMinutes(aMins);
+  const pierToFASpeed = displayAvg(vr.departure.pierToFA.distance, minutesToDecimalHours(pMins));
   const sbeToBerthSpeed = displayAvg(vr.arrival.sbeToBerth.distance, minutesToDecimalHours(aMins));
-  const voyageAvgSpeed  = displayAvg(vr.voyage.totalMiles, steamingTimeToDecimalHours(vr.voyage.steamingTime));
+  const voyageAvgSpeed = displayAvg(vr.voyage.totalMiles, steamingTimeToDecimalHours(vr.voyage.steamingTime));
 
   return (
     <div className="cat-card nav rounded-xl overflow-hidden mb-4">
@@ -188,9 +204,9 @@ export function VoyageReportSection({
             <span className="cat-label" style={{ padding: 0, letterSpacing: '1.5px' }}>Voyage Report</span>
             {collapsed && (
               <p className="text-[0.6rem] font-mono mt-0.5" style={{ color: 'var(--color-dim)' }}>
-                {depPort || 'From'} {'\u2192'} {arrPort || 'To'}
-                {vr.voyage.totalMiles ? ` \u2022 ${vr.voyage.totalMiles} nm` : ''}
-                {voyageAvgSpeed !== '\u2013' ? ` \u2022 ${voyageAvgSpeed} kts` : ''}
+                {depPort || 'From'} {'→'} {arrPort || 'To'}
+                {vr.voyage.totalMiles ? ` • ${vr.voyage.totalMiles} nm` : ''}
+                {voyageAvgSpeed !== '–' ? ` • ${voyageAvgSpeed} kts` : ''}
               </p>
             )}
           </div>
@@ -201,7 +217,10 @@ export function VoyageReportSection({
           )}
           {!readOnly && onDelete && (
             <button
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: 'var(--color-faint)' }}
               title="Remove Voyage Report"
@@ -219,9 +238,9 @@ export function VoyageReportSection({
           <div className="grid grid-cols-4 gap-3 px-4 py-2.5"
                style={{ background: 'rgba(2,132,199,0.03)' }}>
             <ReadField label="From" value={depPort} placeholder="Set in Departure" />
-            <ReadField label="To"   value={arrPort} placeholder="Set in Arrival"   />
-            <ReadField label="Dep. Date" value={depDate} mono placeholder="\u2013" />
-            <ReadField label="Arr. Date" value={arrDate} mono placeholder="\u2013" />
+            <ReadField label="To" value={arrPort} placeholder="Set in Arrival" />
+            <ReadField label="Dep. Date" value={depDate} mono placeholder="–" />
+            <ReadField label="Arr. Date" value={arrDate} mono placeholder="–" />
           </div>
 
           {/* 3-column grid */}
@@ -241,7 +260,7 @@ export function VoyageReportSection({
                   onChange={(v) => updateField('departure', 'fa', v)}
                 />
               </div>
-              <div className="vr-sub-head">Pier {'\u2192'} FA</div>
+              <div className="vr-sub-head">Pier {'→'} FA</div>
               <div className="vr-field">
                 <Field
                   label="Dist (nm)" type="number" step="0.1"
@@ -255,7 +274,7 @@ export function VoyageReportSection({
 
             {/* SEA PASSAGE */}
             <div className="vr-col">
-              <div className="vr-col-head">Sea Passage (FA {'\u2192'} SBE)</div>
+              <div className="vr-col-head">Sea Passage (FA {'→'} SBE)</div>
               <div className="vr-field-full">
                 <Field
                   label="Total Miles" type="number" step="0.1"
@@ -295,7 +314,7 @@ export function VoyageReportSection({
                   onChange={(v) => updateField('arrival', 'fwe', v)}
                 />
               </div>
-              <div className="vr-sub-head">SBE {'\u2192'} Berth</div>
+              <div className="vr-sub-head">SBE {'→'} Berth</div>
               <div className="vr-field">
                 <Field
                   label="Dist (nm)" type="number" step="0.1"
@@ -313,13 +332,17 @@ export function VoyageReportSection({
   );
 }
 
-// Unified field renderer: real `<input>` in edit mode (or a custom
-// compound picker when type="time6" / "duration"), a static div that
-// matches the input's dimensions in read-only mode. Keeps view and
-// edit visually aligned so toggling Edit Mode doesn't reflow the card.
-function Field({ label, type, step, value, onChange, readOnly, placeholder }) {
-  // Time inputs constrained to 6-min slots get the custom picker. The
-  // TimePicker6Min component handles its own readOnly rendering.
+interface FieldProps {
+  label: string;
+  type: 'time6' | 'duration' | 'text' | 'number';
+  step?: string;
+  value: string;
+  onChange: (next: string) => void;
+  readOnly?: boolean;
+  placeholder?: string;
+}
+
+function Field({ label, type, step, value, onChange, readOnly, placeholder }: FieldProps) {
   if (type === 'time6') {
     return (
       <div>
@@ -328,8 +351,6 @@ function Field({ label, type, step, value, onChange, readOnly, placeholder }) {
       </div>
     );
   }
-  // Elapsed-time duration inputs (e.g. Steaming Time). Hours unbounded,
-  // minutes a 6-min slot select. DurationPicker handles readOnly itself.
   if (type === 'duration') {
     return (
       <div>
@@ -346,7 +367,7 @@ function Field({ label, type, step, value, onChange, readOnly, placeholder }) {
           className="form-input font-mono text-[0.78rem]"
           style={{ background: 'transparent', border: '1px solid transparent', cursor: 'default' }}
         >
-          {value || '\u2014'}
+          {value || '—'}
         </div>
       ) : (
         <input
@@ -363,11 +384,7 @@ function Field({ label, type, step, value, onChange, readOnly, placeholder }) {
   );
 }
 
-// DerivedField: a read-only field for values the form computes from other
-// inputs (Pier→FA and SBE→Berth Time fall out of the HH:MM timestamps).
-// Styled as an input-shaped box with a dashed border + "auto" badge so
-// it reads as "this was computed, not typed."
-function DerivedField({ label, value }) {
+function DerivedField({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <label className="form-label flex items-center gap-1.5">
@@ -390,13 +407,20 @@ function DerivedField({ label, value }) {
           color: value ? 'var(--color-text)' : 'var(--color-faint)',
         }}
       >
-        {value || '\u2014'}
+        {value || '—'}
       </div>
     </div>
   );
 }
 
-function ReadField({ label, value, placeholder, mono = false }) {
+interface ReadFieldProps {
+  label: string;
+  value: string | null | undefined;
+  placeholder: string;
+  mono?: boolean;
+}
+
+function ReadField({ label, value, placeholder, mono = false }: ReadFieldProps) {
   return (
     <div>
       <label className="form-label">{label}</label>

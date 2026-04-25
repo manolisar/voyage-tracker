@@ -1,4 +1,3 @@
-// @ts-nocheck
 // StaleFileModal — shown when the on-disk mtime is newer than what we
 // loaded, meaning another crew member saved this voyage while we were
 // editing it. See the plan's "Stale-file check" section.
@@ -14,6 +13,15 @@
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { X, Cloud } from '../Icons';
 
+interface Props {
+  filename: string;
+  voyageLabel?: string | null;
+  onReload: () => void;
+  onForce: () => void;
+  onCancel: () => void;
+  busy?: boolean;
+}
+
 export function StaleFileModal({
   filename,
   voyageLabel,
@@ -21,7 +29,7 @@ export function StaleFileModal({
   onForce,
   onCancel,
   busy = false,
-}) {
+}: Props) {
   useEscapeKey(onCancel, busy);
 
   return (

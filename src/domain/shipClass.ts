@@ -27,9 +27,12 @@ export async function loadShips(): Promise<Ship[]> {
   if (cached) return cached;
   const res = await fetch(`${baseUrl}ships.json`, { cache: 'no-cache' });
   if (!res.ok) throw new Error(`Failed to load ships.json (${res.status})`);
-  const data = (await res.json()) as Ship[];
-  cache.set('__ships', data);
-  return data;
+  const data = (await res.json()) as { ships?: Ship[] } | Ship[];
+  // ships.json is `{ version, ships: [...] }`; defensively accept a bare array
+  // too in case a future export format ships unwrapped.
+  const ships = Array.isArray(data) ? data : (data.ships ?? []);
+  cache.set('__ships', ships);
+  return ships;
 }
 
 export async function loadShipClass(classId: string): Promise<ShipClass> {

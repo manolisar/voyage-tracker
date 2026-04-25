@@ -1,14 +1,19 @@
-// @ts-nocheck
 // TreeToolbar — search box + filter pills + refresh button.
 // Sits at the top of the sidebar, above the tree itself.
 
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { Refresh, Search } from '../Icons';
+import type { FilterMode } from '../../contexts/voyageStore.helpers';
 
-const FILTERS = [
+interface FilterOption {
+  id: FilterMode;
+  label: string;
+}
+
+const FILTERS: FilterOption[] = [
   { id: 'active', label: 'Active' },
-  { id: 'ended',  label: 'Ended'  },
-  { id: 'all',    label: 'All'    },
+  { id: 'ended', label: 'Ended' },
+  { id: 'all', label: 'All' },
 ];
 
 export function TreeToolbar() {

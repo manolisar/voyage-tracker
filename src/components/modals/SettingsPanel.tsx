@@ -1,4 +1,3 @@
-// @ts-nocheck
 // SettingsPanel — the gear-icon modal in the TopBar. Replaces the old
 // GitHub-era AdminPanel. Four actions, no privileged concepts:
 //
@@ -11,7 +10,13 @@
 // Switching ship / user lives on the TopBar (log-out button) — duplicating
 // it here was redundant.
 
-import { useEffect, useRef, useState } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from 'react';
 import { useSession } from '../../hooks/useSession';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useToast } from '../../hooks/useToast';
@@ -29,21 +34,29 @@ import {
 import { defaultDensities } from '../../domain/shipClass';
 import { getShipSettings, putShipSettings } from '../../storage/indexeddb';
 import { Download, Folder, Settings, Upload, X } from '../Icons';
+import type { FuelKey, ShipClass } from '../../types/domain';
 
-export function SettingsPanel({ shipClass, onClose }) {
+interface Props {
+  shipClass: ShipClass | null;
+  onClose: () => void;
+}
+
+type BusyState = 'folder' | 'export' | 'import' | 'densities' | null;
+
+export function SettingsPanel({ shipClass, onClose }: Props) {
   const { shipId, userName, role } = useSession();
   const { refreshList } = useVoyageStore();
   const toast = useToast();
 
-  const [currentFolder, setCurrentFolder] = useState(null);
-  const [busy, setBusy] = useState(null); // 'folder' | 'export' | 'import' | 'densities' | null
-  const importInputRef = useRef(null);
+  const [currentFolder, setCurrentFolder] = useState<string | null>(null);
+  const [busy, setBusy] = useState<BusyState>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   // Density editor — pre-filled from shipClass baseline + any per-ship IDB
   // overrides. `densities` holds the working string values (inputs are
   // controlled), `densityDirty` flips true as soon as the user types.
   const baseline = shipClass ? defaultDensities(shipClass) : null;
-  const [densities, setDensities] = useState(null);
+  const [densities, setDensities] = useState<Record<string, string> | null>(null);
   const [densityDirty, setDensityDirty] = useState(false);
   useEffect(() => {
     if (!shipId || !baseline) return undefined;
@@ -51,16 +64,20 @@ export function SettingsPanel({ shipClass, onClose }) {
     (async () => {
       const settings = await getShipSettings(shipId);
       if (!alive) return;
-      const overrides = settings?.defaultDensities || {};
-      const merged = {};
-      for (const fuel of Object.keys(baseline)) {
+      const overrides =
+        (settings as { defaultDensities?: Partial<Record<FuelKey, number>> } | null | undefined)
+          ?.defaultDensities || {};
+      const merged: Record<string, string> = {};
+      for (const fuel of Object.keys(baseline) as FuelKey[]) {
         const v = overrides[fuel] ?? baseline[fuel];
         merged[fuel] = String(v);
       }
       setDensities(merged);
       setDensityDirty(false);
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
     // baseline is derived from shipClass; depending on shipClass.id is enough.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shipId, shipClass?.id]);
@@ -70,6 +87,7 @@ export function SettingsPanel({ shipClass, onClose }) {
   // Show the current folder name for reassurance. If permission isn't
   // granted (shouldn't happen post-landing) show a dash.
   useEffect(() => {
+    if (!shipId) return undefined;
     let alive = true;
     (async () => {
       try {
@@ -79,10 +97,13 @@ export function SettingsPanel({ shipClass, onClose }) {
         if (alive) setCurrentFolder(null);
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [shipId]);
 
   async function handleChangeFolder() {
+    if (!shipId) return;
     setBusy('folder');
     try {
       const h = await pickDirectoryForShip(shipId);
@@ -90,8 +111,8 @@ export function SettingsPanel({ shipClass, onClose }) {
       await refreshList();
       toast.addToast(`Folder changed to ${h.name}`, 'success');
     } catch (e) {
-      if (e?.name !== 'AbortError') {
-        toast.addToast(e.message || 'Could not change folder', 'error');
+      if ((e as Error)?.name !== 'AbortError') {
+        toast.addToast((e as Error).message || 'Could not change folder', 'error');
       }
     } finally {
       setBusy(null);
@@ -99,13 +120,14 @@ export function SettingsPanel({ shipClass, onClose }) {
   }
 
   async function handleExport() {
+    if (!shipId) return;
     setBusy('export');
     try {
       const bundle = await buildBundle(shipId);
       const filename = downloadBundle(bundle);
       toast.addToast(`Exported ${bundle.voyages.length} voyage(s) → ${filename}`, 'success');
     } catch (e) {
-      toast.addToast(e.message || 'Export failed', 'error');
+      toast.addToast((e as Error).message || 'Export failed', 'error');
     } finally {
       setBusy(null);
     }
@@ -115,10 +137,10 @@ export function SettingsPanel({ shipClass, onClose }) {
     importInputRef.current?.click();
   }
 
-  async function handleImportFile(e) {
+  async function handleImportFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = ''; // allow re-selecting the same file later
-    if (!file) return;
+    if (!file || !shipId) return;
     setBusy('import');
     try {
       const bundle = await parseBundleFile(file);
@@ -126,7 +148,10 @@ export function SettingsPanel({ shipClass, onClose }) {
         const ok = window.confirm(
           `Bundle was exported for ship "${bundle.shipId}" but you're importing into "${shipId}".\n\nContinue anyway?`,
         );
-        if (!ok) { setBusy(null); return; }
+        if (!ok) {
+          setBusy(null);
+          return;
+        }
       }
       const { written, skipped } = await importBundle(bundle, shipId);
       await refreshList();
@@ -134,30 +159,30 @@ export function SettingsPanel({ shipClass, onClose }) {
       if (skipped.length) parts.push(`skipped ${skipped.length} (already present)`);
       toast.addToast(parts.join(' · '), 'success');
     } catch (e) {
-      toast.addToast(e.message || 'Import failed', 'error');
+      toast.addToast((e as Error).message || 'Import failed', 'error');
     } finally {
       setBusy(null);
     }
   }
 
-  function handleDensityChange(fuel, raw) {
+  function handleDensityChange(fuel: string, raw: string) {
     setDensities((prev) => (prev ? { ...prev, [fuel]: raw } : prev));
     setDensityDirty(true);
   }
 
   function handleDensityReset() {
     if (!baseline) return;
-    const reset = {};
-    for (const fuel of Object.keys(baseline)) reset[fuel] = String(baseline[fuel]);
+    const reset: Record<string, string> = {};
+    for (const fuel of Object.keys(baseline)) reset[fuel] = String(baseline[fuel as FuelKey]);
     setDensities(reset);
     setDensityDirty(true);
   }
 
   async function handleDensitySave() {
-    if (!densities || !baseline) return;
+    if (!densities || !baseline || !shipId) return;
     // Parse + validate. Reject NaN or non-positive; accept anything reasonable
     // (no tight range — different HFO cuts legitimately vary ±0.05).
-    const parsed = {};
+    const parsed: Record<string, number> = {};
     for (const fuel of Object.keys(baseline)) {
       const n = Number(densities[fuel]);
       if (!Number.isFinite(n) || n <= 0) {
@@ -172,7 +197,7 @@ export function SettingsPanel({ shipClass, onClose }) {
       setDensityDirty(false);
       toast.addToast('Default densities saved — applied to new voyages', 'success');
     } catch (e) {
-      toast.addToast(e.message || 'Could not save densities', 'error');
+      toast.addToast((e as Error).message || 'Could not save densities', 'error');
     } finally {
       setBusy(null);
     }
@@ -334,7 +359,14 @@ export function SettingsPanel({ shipClass, onClose }) {
   );
 }
 
-function Row({ icon, title, subtitle, action }) {
+interface RowProps {
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+  action: ReactNode;
+}
+
+function Row({ icon, title, subtitle, action }: RowProps) {
   return (
     <div className="flex items-start justify-between gap-4">
       <div className="flex items-start gap-3 min-w-0">

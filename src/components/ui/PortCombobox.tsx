@@ -1,4 +1,3 @@
-// @ts-nocheck
 // PortCombobox — typeahead over the shipped UN/LOCODE catalog + per-ship
 // custom additions. Surfaces the resolved port object via onChange:
 //   { code: "MIA", name: "Miami", country: "US", locode: "USMIA" }
@@ -14,27 +13,44 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from '../../hooks/useSession';
 import { loadPorts } from '../../domain/ports';
 import { getCustomPorts, addCustomPort } from '../../storage/indexeddb';
+import type { PortRef } from '../../types/domain';
 
 const CODE_RE = /^[A-Z]{3}$/;
+
+interface Props {
+  id?: string;
+  label?: string;
+  value: PortRef | null;
+  onChange?: (port: PortRef) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  autoFocus?: boolean;
+}
+
+interface PendingUnknown {
+  code: string;
+  name: string;
+  country: string;
+}
 
 export function PortCombobox({
   id,
   label,
-  value,               // current port object or null
+  value,
   onChange,
   disabled = false,
   placeholder = 'Type a port (e.g. MIA, Miami)',
   autoFocus = false,
-}) {
+}: Props) {
   const { shipId } = useSession();
-  const [catalog, setCatalog] = useState([]);
-  const [customs, setCustoms] = useState([]);
+  const [catalog, setCatalog] = useState<PortRef[]>([]);
+  const [customs, setCustoms] = useState<PortRef[]>([]);
   const [query, setQuery] = useState(value?.code || '');
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
-  const [pendingUnknown, setPendingUnknown] = useState(null); // { code, name, country }
-  const inputRef = useRef(null);
-  const listRef = useRef(null);
+  const [pendingUnknown, setPendingUnknown] = useState<PendingUnknown | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const listRef = useRef<HTMLUListElement | null>(null);
 
   // Keep the input synced if the parent replaces `value` externally (form
   // reset, clear, etc.). This is the "adjust state during render" pattern
@@ -48,33 +64,45 @@ export function PortCombobox({
 
   useEffect(() => {
     let alive = true;
-    loadPorts().then((p) => { if (alive) setCatalog(p); }).catch(() => {});
-    return () => { alive = false; };
+    loadPorts()
+      .then((p) => {
+        if (alive) setCatalog(p);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
   }, []);
 
   useEffect(() => {
     if (!shipId) return undefined;
     let alive = true;
-    getCustomPorts(shipId).then((p) => { if (alive) setCustoms(p); }).catch(() => {});
-    return () => { alive = false; };
+    getCustomPorts(shipId)
+      .then((p) => {
+        if (alive) setCustoms(p);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
   }, [shipId]);
 
-  const merged = useMemo(() => {
+  const merged = useMemo<PortRef[]>(() => {
     // Customs first so the user sees their own ports at the top of suggestions.
     const seen = new Set(customs.map((c) => c.locode || c.code));
     const catalogFiltered = catalog.filter((c) => !seen.has(c.locode));
     return [...customs, ...catalogFiltered];
   }, [catalog, customs]);
 
-  const matches = useMemo(() => {
+  const matches = useMemo<PortRef[]>(() => {
     const q = query.trim().toUpperCase();
     if (!q) return merged.slice(0, 50);
     // 3-letter suffixes collide across countries (e.g. SIN matches Singapore,
     // South Sinai, Shiinoki, Sinpo, Siain). Surface all exact-code matches
     // first so the user sees every candidate before any substring hits.
-    const exactCode = [];
-    const locodePrefix = [];
-    const nameMatch = [];
+    const exactCode: PortRef[] = [];
+    const locodePrefix: PortRef[] = [];
+    const nameMatch: PortRef[] = [];
     for (const p of merged) {
       if (p.code === q) exactCode.push(p);
       else if (p.locode?.startsWith(q)) locodePrefix.push(p);
@@ -83,14 +111,14 @@ export function PortCombobox({
     return [...exactCode, ...locodePrefix, ...nameMatch].slice(0, 50);
   }, [merged, query]);
 
-  function commit(port) {
+  function commit(port: PortRef) {
     onChange?.(port);
     setQuery(port.code);
     setOpen(false);
     setPendingUnknown(null);
   }
 
-  function handleInput(e) {
+  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value;
     // Uppercase aggressively for codes; user typing a name sees their case
     // preserved because letters stay letters but we keep the normalized form
@@ -126,7 +154,7 @@ export function PortCombobox({
     }, 120);
   }
 
-  function handleKey(e) {
+  function handleKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (pendingUnknown) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -146,13 +174,19 @@ export function PortCombobox({
   }
 
   async function confirmPendingUnknown() {
+    if (!pendingUnknown) return;
     const { code, name, country } = pendingUnknown;
     const trimmedName = (name || '').trim();
     const cc = (country || '').trim().toUpperCase();
     if (!CODE_RE.test(code) || !trimmedName || cc.length !== 2) return;
-    const port = { code, name: trimmedName, country: cc, locode: `${cc}${code}` };
-    try { await addCustomPort(shipId, port); }
-    catch (err) { console.warn('[PortCombobox] addCustomPort failed', err); }
+    const port: PortRef = { code, name: trimmedName, country: cc, locode: `${cc}${code}` };
+    if (shipId) {
+      try {
+        await addCustomPort(shipId, port);
+      } catch (err) {
+        console.warn('[PortCombobox] addCustomPort failed', err);
+      }
+    }
     setCustoms((prev) => [port, ...prev.filter((p) => p.code !== code)]);
     commit(port);
   }
@@ -195,7 +229,10 @@ export function PortCombobox({
                 background: i === highlight ? 'var(--color-surface2)' : 'transparent',
                 color: 'var(--color-text)',
               }}
-              onMouseDown={(e) => { e.preventDefault(); commit(p); }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                commit(p);
+              }}
               onMouseEnter={() => setHighlight(i)}
             >
               <span className="truncate">
@@ -206,7 +243,9 @@ export function PortCombobox({
                 )}
               </span>
               {p.locode && (
-                <span className="font-mono text-xs" style={{ color: 'var(--color-faint)' }}>{p.locode}</span>
+                <span className="font-mono text-xs" style={{ color: 'var(--color-faint)' }}>
+                  {p.locode}
+                </span>
               )}
             </li>
           ))}
@@ -226,14 +265,16 @@ export function PortCombobox({
               className="form-input col-span-2"
               placeholder="Port name"
               value={pendingUnknown.name}
-              onChange={(e) => setPendingUnknown((u) => ({ ...u, name: e.target.value }))}
+              onChange={(e) => setPendingUnknown((u) => (u ? { ...u, name: e.target.value } : u))}
             />
             <input
               type="text"
               className="form-input font-mono"
               placeholder="Country (2)"
               value={pendingUnknown.country}
-              onChange={(e) => setPendingUnknown((u) => ({ ...u, country: e.target.value.toUpperCase() }))}
+              onChange={(e) =>
+                setPendingUnknown((u) => (u ? { ...u, country: e.target.value.toUpperCase() } : u))
+              }
               maxLength={2}
             />
           </div>
@@ -241,7 +282,10 @@ export function PortCombobox({
             <button
               type="button"
               className="btn-flat px-3 py-1 rounded text-xs"
-              onClick={() => { setPendingUnknown(null); setQuery(value?.code || ''); }}
+              onClick={() => {
+                setPendingUnknown(null);
+                setQuery(value?.code || '');
+              }}
             >
               Cancel
             </button>

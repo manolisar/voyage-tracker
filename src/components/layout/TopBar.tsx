@@ -1,4 +1,3 @@
-// @ts-nocheck
 // TopBar — persistent header across the main view.
 // Carries: hamburger (sidebar toggle) · title/ship · edit/view badge · primary
 // actions (Enable Edit / Exit Edit) · settings · theme · sign-out.
@@ -7,8 +6,25 @@ import { useTheme } from '../../hooks/useTheme';
 import { useSession } from '../../hooks/useSession';
 import { EDITOR_ROLE_LABELS } from '../../domain/constants';
 import { Anchor, Edit, Eye, HelpCircle, LogOut, Menu, Moon, Settings, Sun, Unlock } from '../Icons';
+import type { Ship } from '../../types/domain';
 
-export function TopBar({ ship, onToggleSidebar, onEnableEdit, onOpenSettings, onOpenHelp, onNewVoyage }) {
+interface Props {
+  ship: Ship | null | undefined;
+  onToggleSidebar: () => void;
+  onEnableEdit: () => void;
+  onOpenSettings: () => void;
+  onOpenHelp: () => void;
+  onNewVoyage: () => void;
+}
+
+export function TopBar({
+  ship,
+  onToggleSidebar,
+  onEnableEdit,
+  onOpenSettings,
+  onOpenHelp,
+  onNewVoyage,
+}: Props) {
   const { theme, toggleTheme } = useTheme();
   const { editMode, role, exitEditMode, endSession } = useSession();
 
@@ -121,7 +137,7 @@ export function TopBar({ ship, onToggleSidebar, onEnableEdit, onOpenSettings, on
         aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
       >
         {theme === 'dark'
-          ? <Sun  className="w-4 h-4" style={{ color: 'var(--color-dim)' }} />
+          ? <Sun className="w-4 h-4" style={{ color: 'var(--color-dim)' }} />
           : <Moon className="w-4 h-4" style={{ color: 'var(--color-dim)' }} />}
       </button>
 

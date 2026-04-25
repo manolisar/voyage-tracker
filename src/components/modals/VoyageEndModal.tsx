@@ -1,43 +1,51 @@
-// @ts-nocheck
 // VoyageEndModal — opens from VoyageDetail's "⚑ End Voyage" button (edit mode).
 // Finalizes a voyage: aggregates per-leg fuel totals, collects the single
 // lub-oil entry (ME cons / 13S-14S / Used LO13C), engineer + notes + end-date.
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { calcVoyageTotals, formatMT } from '../../domain/calculations';
 import { voyageRouteLabel } from '../../domain/factories';
 import { X } from '../Icons';
+import type { ShipClass } from '../../types/domain';
 
-export function VoyageEndModal({ filename, shipClass, onClose }) {
+interface Props {
+  filename: string;
+  shipClass: ShipClass | null;
+  onClose: () => void;
+}
+
+export function VoyageEndModal({ filename, shipClass, onClose }: Props) {
   const { loadedById, endVoyage } = useVoyageStore();
   const voyage = loadedById[filename];
 
   const totals = useMemo(
-    () => (voyage && shipClass ? calcVoyageTotals(voyage, shipClass) : { hfo: 0, mgo: 0, lsfo: 0 }),
+    () => (voyage && shipClass
+      ? calcVoyageTotals(voyage, shipClass)
+      : { hfo: 0, mgo: 0, lsfo: 0, total: 0 }),
     [voyage, shipClass],
   );
-  const totalFuel = (Number(totals.hfo || 0) + Number(totals.mgo || 0) + Number(totals.lsfo || 0));
+  const totalFuel = Number(totals.hfo || 0) + Number(totals.mgo || 0) + Number(totals.lsfo || 0);
 
-  const prevLube = voyage?.voyageEnd?.lubeOil || {};
-  const [meCons,    setMeCons]    = useState(prevLube.meCons    || '');
-  const [lo13s14s,  setLo13s14s]  = useState(prevLube.lo13s14s  || '');
+  const prevLube = voyage?.voyageEnd?.lubeOil || { meCons: '', lo13s14s: '', usedLo13c: '' };
+  const [meCons, setMeCons] = useState(prevLube.meCons || '');
+  const [lo13s14s, setLo13s14s] = useState(prevLube.lo13s14s || '');
   const [usedLo13c, setUsedLo13c] = useState(prevLube.usedLo13c || '');
-  const [engineer,  setEngineer]  = useState(voyage?.voyageEnd?.engineer || '');
-  const [endDate,   setEndDate]   = useState(
+  const [engineer, setEngineer] = useState(voyage?.voyageEnd?.engineer || '');
+  const [endDate, setEndDate] = useState(
     voyage?.endDate || voyage?.voyageEnd?.completedAt?.slice(0, 10) || new Date().toISOString().slice(0, 10),
   );
-  const [notes,     setNotes]     = useState(voyage?.voyageEnd?.notes || '');
-  const [error, setError] = useState(null);
+  const [notes, setNotes] = useState(voyage?.voyageEnd?.notes || '');
+  const [error, setError] = useState<string | null>(null);
 
   useEscapeKey(onClose);
 
   const canSubmit = !!shipClass && !!voyage && !!endDate;
 
-  function handleSubmit(e) {
+  function handleSubmit(e: FormEvent) {
     e?.preventDefault?.();
-    if (!canSubmit) return;
+    if (!canSubmit || !shipClass) return;
     try {
       endVoyage(filename, {
         shipClass,
@@ -45,15 +53,15 @@ export function VoyageEndModal({ filename, shipClass, onClose }) {
         engineer: engineer.trim(),
         notes: notes.trim(),
         lubeOil: {
-          meCons:    meCons,
-          lo13s14s:  lo13s14s,
-          usedLo13c: usedLo13c,
+          meCons,
+          lo13s14s,
+          usedLo13c,
         },
       });
       onClose();
     } catch (err) {
       console.error('[VoyageEndModal] failed', err);
-      setError(err?.message || 'Failed to end voyage.');
+      setError((err as Error)?.message || 'Failed to end voyage.');
     }
   }
 
@@ -150,9 +158,7 @@ export function VoyageEndModal({ filename, shipClass, onClose }) {
           </div>
 
           {/* Signature + notes */}
-          <div
-            className="glass-card rounded-xl p-4 grid grid-cols-2 gap-4"
-          >
+          <div className="glass-card rounded-xl p-4 grid grid-cols-2 gap-4">
             <div>
               <div className="form-label">Chief engineer</div>
               <input

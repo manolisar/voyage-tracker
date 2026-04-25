@@ -1,4 +1,3 @@
-// @ts-nocheck
 // AuthGate — routes between LandingScreen and AppShell based on session state.
 //
 // The session (shipId + userName + role) is hydrated from IDB by

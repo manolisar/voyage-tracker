@@ -1,32 +1,38 @@
-// @ts-nocheck
 // NewVoyageModal — opens from the top bar "+ New Voyage" button (edit mode).
 // Collects: embarkation + disembarkation ports (via PortCombobox against the
 // UN/LOCODE catalog) + start date (+ optional end date). The actual file
 // write goes through VoyageStore.createVoyage, which stamps a filename of
 // the form <SHIP_CODE>_<startDate>_<fromPort>-<toPort>.json.
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { PortCombobox } from '../ui/PortCombobox';
 import { X } from '../Icons';
+import type { PortRef, Ship, ShipClass } from '../../types/domain';
 
-export function NewVoyageModal({ ship, shipClass, onClose }) {
+interface Props {
+  ship: Ship | null | undefined;
+  shipClass: ShipClass | null;
+  onClose: () => void;
+}
+
+export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
   const { createVoyage } = useVoyageStore();
-  const [fromPort, setFromPort] = useState(null);
-  const [toPort,   setToPort]   = useState(null);
+  const [fromPort, setFromPort] = useState<PortRef | null>(null);
+  const [toPort, setToPort] = useState<PortRef | null>(null);
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [endDate, setEndDate]     = useState('');
+  const [endDate, setEndDate] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEscapeKey(onClose, busy);
 
   const canSubmit = !!fromPort?.code && !!toPort?.code && !!startDate && !busy && !!shipClass && !!ship?.code;
 
-  async function handleCreate(e) {
+  async function handleCreate(e: FormEvent) {
     e?.preventDefault?.();
-    if (!canSubmit) return;
+    if (!canSubmit || !fromPort || !toPort || !shipClass || !ship?.code) return;
     setBusy(true);
     setError(null);
     try {
@@ -41,7 +47,7 @@ export function NewVoyageModal({ ship, shipClass, onClose }) {
       onClose();
     } catch (err) {
       console.error('[NewVoyageModal] create failed', err);
-      setError(err?.message || 'Failed to create voyage.');
+      setError((err as Error)?.message || 'Failed to create voyage.');
       setBusy(false);
     }
   }

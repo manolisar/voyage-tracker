@@ -1,4 +1,3 @@
-// @ts-nocheck
 // FloatingCarryOverButton — bottom-right FAB that opens ManualCarryOverModal.
 // Enabled only when `lastEditedPhase` is set (i.e. the user has changed an
 // equipment END value since the last carry-over). Label echoes the source
@@ -6,14 +5,18 @@
 
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 
-export function FloatingCarryOverButton({ onClick }) {
+interface Props {
+  onClick: () => void;
+}
+
+export function FloatingCarryOverButton({ onClick }: Props) {
   const { lastEditedPhase, findNextPhaseFor } = useVoyageStore();
   const hasSource = !!lastEditedPhase;
   const target = hasSource ? findNextPhaseFor(lastEditedPhase) : null;
   const enabled = hasSource && !!target;
 
   const title = enabled
-    ? `Carry Over — from: ${lastEditedPhase.phaseName || 'phase'} → ${target.phaseName || 'next phase'}`
+    ? `Carry Over — from: ${lastEditedPhase!.phaseName || 'phase'} → ${target!.phaseName || 'next phase'}`
     : hasSource
       ? 'No next phase to carry into'
       : 'Edit END values first to enable carry-over';
@@ -41,7 +44,7 @@ export function FloatingCarryOverButton({ onClick }) {
         <span>Carry Over</span>
         <span className="text-[0.62rem] font-normal" style={{ opacity: 0.85 }}>
           {enabled
-            ? `from: ${lastEditedPhase.phaseName || 'phase'}`
+            ? `from: ${lastEditedPhase!.phaseName || 'phase'}`
             : hasSource
               ? 'no next phase'
               : 'edit END values first'}
