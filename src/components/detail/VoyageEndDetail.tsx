@@ -17,6 +17,7 @@ import { useToast } from '../../hooks/useToast';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { voyageRouteLongLabel } from '../../domain/factories';
 import { Unlock } from '../Icons';
+import { SignalFlagWord } from '../voyage/SignalFlags';
 import type { Voyage } from '../../types/domain';
 
 interface Props {
@@ -91,6 +92,17 @@ export function VoyageEndDetail({ voyage }: Props) {
           </p>
         </section>
       )}
+
+      {/* Decorative pennant: "VOYAGE END" in International Code of Signals. */}
+      <div className="mt-16 mb-6 flex flex-col items-center gap-3 select-none">
+        <SignalFlagWord text="VOYAGE END" size={64} />
+        <div
+          className="text-[0.6rem] tracking-[0.25em] uppercase font-bold"
+          style={{ color: 'var(--color-faint)' }}
+        >
+          International Code of Signals
+        </div>
+      </div>
     </div>
   );
 }
