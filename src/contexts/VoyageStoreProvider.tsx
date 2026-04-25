@@ -153,8 +153,8 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
 
   // Load manifest on mount. The provider is `key`'d on shipId by AppShell, so
   // a ship switch unmounts/remounts this provider with fresh state.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshList();
   }, [refreshList]);
 
