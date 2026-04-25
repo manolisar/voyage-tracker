@@ -73,6 +73,22 @@ export function calcVoyageTotals(
   return out;
 }
 
+// Sum the per-leg arrival fresh-water consumption across a voyage. Lives on
+// arrival reports only (departure has bunkered + ROB; consumption is reported
+// at arrival). Returns total m³ as a number; non-numeric / missing entries
+// are skipped silently.
+export function calcVoyageFreshWaterTotal(
+  voyage: Pick<Voyage, 'legs'> | null | undefined,
+): number {
+  let total = 0;
+  if (!voyage?.legs) return total;
+  for (const leg of voyage.legs) {
+    const cons = parseFloat(leg.arrival?.freshWater?.consumption ?? '');
+    if (Number.isFinite(cons)) total += cons;
+  }
+  return total;
+}
+
 // Sum consumption for a single phase, by fuel type.
 export function calcPhaseTotals(
   phase: Pick<Phase, 'equipment'> | null | undefined,

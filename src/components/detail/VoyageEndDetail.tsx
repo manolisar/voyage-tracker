@@ -1,15 +1,26 @@
 // VoyageEndDetail — final voyage close-out node (lub-oil + verified totals).
 // Lub-oil is recorded ONLY here per the spec, never in dep/arrival reports.
+//
+// Totals (fuel + fresh water) are recomputed LIVE on every render via
+// calcVoyageTotals / calcVoyageFreshWaterTotal. The voyageEnd.totals
+// snapshot stored at close time is kept on disk for audit, but ignored
+// for display so this view never drifts from VoyageDetail after a
+// post-close amendment.
 
-import { formatMT } from '../../domain/calculations';
+import {
+  calcVoyageFreshWaterTotal,
+  calcVoyageTotals,
+  formatMT,
+} from '../../domain/calculations';
 import { voyageRouteLongLabel } from '../../domain/factories';
-import type { Voyage } from '../../types/domain';
+import type { ShipClass, Voyage } from '../../types/domain';
 
 interface Props {
   voyage: Voyage;
+  shipClass: ShipClass;
 }
 
-export function VoyageEndDetail({ voyage }: Props) {
+export function VoyageEndDetail({ voyage, shipClass }: Props) {
   const end = voyage.voyageEnd;
   if (!end) {
     return (
@@ -19,7 +30,8 @@ export function VoyageEndDetail({ voyage }: Props) {
     );
   }
 
-  const t = end.totals || ({} as typeof end.totals);
+  const fuel = calcVoyageTotals(voyage, shipClass);
+  const freshWaterCons = calcVoyageFreshWaterTotal(voyage);
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -45,25 +57,24 @@ export function VoyageEndDetail({ voyage }: Props) {
         </div>
       </section>
 
-      {/* Verified totals snapshot */}
-      <div className="section-label mb-3">Verified Totals (snapshot at close)</div>
+      <div className="section-label mb-3">Verified Totals</div>
       <section className="cat-card fuel mb-5">
         <div className="cat-label">Fuel Consumption — Final</div>
         <div className="cat-body">
           <div className="fuel-cols">
             <div className="fuel-col hfo">
               <div className="fc-type"><span className="fc-dot" />HFO</div>
-              <div className="fc-big">{t.hfo != null ? formatMT(t.hfo) : '—'}</div>
+              <div className="fc-big">{formatMT(fuel.hfo)}</div>
               <div className="fc-rob">MT</div>
             </div>
             <div className="fuel-col mgo">
               <div className="fc-type"><span className="fc-dot" />MGO</div>
-              <div className="fc-big">{t.mgo != null ? formatMT(t.mgo) : '—'}</div>
+              <div className="fc-big">{formatMT(fuel.mgo)}</div>
               <div className="fc-rob">MT</div>
             </div>
             <div className="fuel-col lsfo">
               <div className="fc-type"><span className="fc-dot" />LSFO</div>
-              <div className="fc-big">{t.lsfo != null ? formatMT(t.lsfo) : '—'}</div>
+              <div className="fc-big">{formatMT(fuel.lsfo)}</div>
               <div className="fc-rob">MT</div>
             </div>
           </div>
@@ -74,7 +85,7 @@ export function VoyageEndDetail({ voyage }: Props) {
         <div className="cat-card water">
           <div className="cat-label">Fresh Water — Total</div>
           <div className="cat-body">
-            <Mini label="Total consumption (m³)" value={t.freshWaterCons != null ? String(t.freshWaterCons) : null} />
+            <Mini label="Total consumption (m³)" value={freshWaterCons > 0 ? freshWaterCons.toFixed(2) : null} />
           </div>
         </div>
 
@@ -88,7 +99,10 @@ export function VoyageEndDetail({ voyage }: Props) {
         </div>
       </section>
 
-      {/* Densities at close */}
+      {/* Densities at close — still a true snapshot (the densities used by the
+          live totals shown above come from voyage.densities, which the chief
+          can edit; densitiesAtClose freezes whatever was active when the
+          voyage was first ended). */}
       {end.densitiesAtClose && (
         <section className="glass-card rounded-2xl p-5 mb-5">
           <div className="section-label mb-3">

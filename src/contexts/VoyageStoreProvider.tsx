@@ -36,7 +36,7 @@ import {
   getShipSettings,
 } from '../storage/indexeddb';
 import { AUTO_SAVE_DELAY_MS } from '../domain/constants';
-import { calcVoyageTotals } from '../domain/calculations';
+import { calcVoyageTotals, calcVoyageFreshWaterTotal } from '../domain/calculations';
 import {
   defaultVoyage,
   defaultLeg,
@@ -656,12 +656,12 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       const nowDate = endDate || new Date().toISOString().slice(0, 10);
       updateVoyage(filename, (v) => {
         const fuel = calcVoyageTotals(v, shipClass);
-        let freshWaterCons = 0;
-        for (const leg of v.legs || []) {
-          const fw = parseFloat(leg.arrival?.freshWater?.consumption);
-          if (Number.isFinite(fw)) freshWaterCons += fw;
-        }
+        const freshWaterCons = calcVoyageFreshWaterTotal(v);
         const base = defaultVoyageEnd(shipClass);
+        // NB: voyageEnd.totals is written here as a snapshot at close time, but
+        // VoyageEndDetail no longer renders from it — it recomputes live via
+        // calcVoyageTotals so post-close amendments stay in sync. The field
+        // is kept on disk for audit / forensic comparison only.
         return {
           ...v,
           endDate: nowDate,

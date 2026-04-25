@@ -3,6 +3,7 @@ import {
   calcConsumption,
   formatMT,
   calcVoyageTotals,
+  calcVoyageFreshWaterTotal,
   calcPhaseTotals,
 } from './calculations';
 import solsticeClassRaw from '../../public/ship-classes/solstice-class.json';
@@ -132,6 +133,38 @@ describe('calcVoyageTotals', () => {
     const totals = calcVoyageTotals(voyage as unknown as Voyage, solsticeClass);
     expect(totals.hfo).toBeCloseTo(4.6, 2);
     expect(totals.total).toBeCloseTo(4.6, 2);
+  });
+});
+
+describe('calcVoyageFreshWaterTotal', () => {
+  it('sums arrival fresh-water consumption across legs', () => {
+    const voyage = {
+      legs: [
+        { arrival: { freshWater: { consumption: '12.5' } } },
+        { arrival: { freshWater: { consumption: '8.25' } } },
+        { arrival: { freshWater: { consumption: '5' } } },
+      ],
+    };
+    expect(calcVoyageFreshWaterTotal(voyage as unknown as Voyage)).toBeCloseTo(25.75, 2);
+  });
+
+  it('skips legs with missing / non-numeric / blank consumption', () => {
+    const voyage = {
+      legs: [
+        { arrival: { freshWater: { consumption: '10' } } },
+        { arrival: { freshWater: { consumption: '' } } },
+        { arrival: { freshWater: { consumption: 'oops' } } },
+        { arrival: {} },
+        {},
+      ],
+    };
+    expect(calcVoyageFreshWaterTotal(voyage as unknown as Voyage)).toBe(10);
+  });
+
+  it('returns 0 on empty / missing voyage', () => {
+    expect(calcVoyageFreshWaterTotal({ legs: [] } as unknown as Voyage)).toBe(0);
+    expect(calcVoyageFreshWaterTotal(null)).toBe(0);
+    expect(calcVoyageFreshWaterTotal(undefined)).toBe(0);
   });
 });
 
