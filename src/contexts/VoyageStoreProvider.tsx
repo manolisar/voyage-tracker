@@ -328,8 +328,45 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       setDrafts((prev) => {
         const base = prev[filename] ?? loadedById[filename];
         if (!base) return prev;
+        // Lock-on-close: once a voyage is ended, mutations are refused until
+        // the chief explicitly reopens it (via reopenVoyage). The UI also
+        // hides edit affordances when ended, so this is mostly defense in
+        // depth — programmatic callers (auto-save retries, late timer
+        // fires) won't slip through.
+        if (base.voyageEnd) {
+          return prev;
+        }
         const next = typeof mutator === 'function' ? mutator(base) : mutator;
         if (next === base) return prev;
+        if (shipId) safePutDraft(shipId, filename, next);
+        return { ...prev, [filename]: next };
+      });
+      setDirty((prev) => {
+        if (prev.has(filename)) return prev;
+        const base = drafts[filename] ?? loadedById[filename];
+        if (base?.voyageEnd) return prev;
+        const n = new Set(prev);
+        n.add(filename);
+        return n;
+      });
+      scheduleSave(filename);
+    },
+    [drafts, loadedById, scheduleSave, shipId],
+  );
+
+  // Reopen a previously-ended voyage. Clears voyageEnd + endDate so the
+  // voyage returns to "active" state and updateVoyage stops refusing
+  // mutations. This bypasses updateVoyage's lock-on-close guard by writing
+  // to drafts directly. Caller should typically warn first; the UI uses a
+  // single-click action since the operation is reversible (re-close to
+  // re-lock at any time).
+  const reopenVoyage = useCallback(
+    (filename: string) => {
+      if (!filename) return;
+      setDrafts((prev) => {
+        const base = prev[filename] ?? loadedById[filename];
+        if (!base?.voyageEnd) return prev;
+        const next: Voyage = { ...base, endDate: '', voyageEnd: null };
         if (shipId) safePutDraft(shipId, filename, next);
         return { ...prev, [filename]: next };
       });
@@ -597,6 +634,12 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       }: AddLegInput,
     ): number => {
       if (!shipClass) throw new Error('addLeg: shipClass required');
+      // Lock-on-close: refuse to append legs to an ended voyage. The chief
+      // must reopen first.
+      const current = draftsRef.current[filename] ?? loadedById[filename];
+      if (current?.voyageEnd) {
+        throw new Error('Voyage is closed — reopen it before adding a leg.');
+      }
       const leg = defaultLeg(shipClass);
       if (fromPort) leg.departure.port = fromPort;
       if (toPort) leg.arrival.port = toPort;
@@ -644,7 +687,7 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       setSelected({ filename, kind: 'departure', legId: leg.id });
       return leg.id;
     },
-    [updateVoyage],
+    [loadedById, updateVoyage],
   );
 
   const endVoyage = useCallback(
@@ -653,6 +696,9 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       { shipClass, endDate = '', engineer = '', notes = '', lubeOil = null }: EndVoyageInput,
     ) => {
       if (!shipClass) throw new Error('endVoyage: shipClass required');
+      // updateVoyage refuses when voyageEnd is already set, so re-closing an
+      // already-ended voyage is a silent no-op. To re-close after edits, the
+      // chief reopens first via reopenVoyage().
       const nowDate = endDate || new Date().toISOString().slice(0, 10);
       updateVoyage(filename, (v) => {
         const fuel = calcVoyageTotals(v, shipClass);
@@ -762,6 +808,7 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       createVoyage,
       addLeg,
       endVoyage,
+      reopenVoyage,
       deleteVoyage,
       discardDraft,
       flushSave,
@@ -800,6 +847,7 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       createVoyage,
       addLeg,
       endVoyage,
+      reopenVoyage,
       deleteVoyage,
       discardDraft,
       flushSave,

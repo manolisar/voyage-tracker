@@ -126,7 +126,8 @@ export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoy
     editMode &&
     selected?.kind === 'voyageReport' &&
     legForEffect &&
-    !legForEffect.voyageReport;
+    !legForEffect.voyageReport &&
+    !voyageForEffect?.voyageEnd; // skip seeding into a locked voyage
   useEffect(() => {
     if (!needsVRSeed || !voyageForEffect?.filename || !legForEffect) return;
     onVoyageReportChange(voyageForEffect.filename, legForEffect.id, defaultVoyageReport());
@@ -152,6 +153,12 @@ export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoy
       </div>
     );
   }
+
+  // Voyage is locked from edits once it's been ended; the chief reopens it
+  // (clears voyageEnd) to amend. The form-level read-only flag below
+  // honours both editMode AND lock state.
+  const isLocked = !!voyage.voyageEnd;
+  const canEdit = editMode && !isLocked;
 
   if (selected.kind === 'voyage' || selected.kind === 'leg') {
     return (
@@ -183,7 +190,7 @@ export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoy
   const densities = voyage.densities || defaultDensities(shipClass);
 
   if (selected.kind === 'departure' || selected.kind === 'arrival') {
-    if (editMode) {
+    if (canEdit) {
       const report = leg[selected.kind];
       if (!report) {
         return (
@@ -228,7 +235,7 @@ export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoy
     // above seeds one asynchronously. Until that settles we render against a
     // throwaway default so the form has something to bind to.
     const vr = leg.voyageReport || defaultVoyageReport();
-    if (editMode) {
+    if (canEdit) {
       const filename = voyage.filename ?? '';
       return (
         <div className="max-w-5xl mx-auto">

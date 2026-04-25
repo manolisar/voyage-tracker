@@ -67,6 +67,10 @@ export interface VoyageStoreContextValue {
   createVoyage: (partial: CreateVoyageInput) => Promise<string>;
   addLeg: (filename: string, input: AddLegInput) => number;
   endVoyage: (filename: string, input: EndVoyageInput) => void;
+  // Reopens a previously-ended voyage so it can be amended. Clears
+  // voyageEnd + endDate; the chief must explicitly re-close (calling
+  // endVoyage again) to lock it once amendments are done.
+  reopenVoyage: (filename: string) => void;
   deleteVoyage: (filename: string) => Promise<void>;
   discardDraft: (filename: string) => void;
   flushSave: (filename: string, opts?: { forceOverwrite?: boolean }) => Promise<void>;

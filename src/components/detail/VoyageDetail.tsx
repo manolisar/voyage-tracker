@@ -5,7 +5,9 @@
 import { calcVoyageTotals, type FuelTotals } from '../../domain/calculations';
 import { formatMT } from '../../domain/calculations';
 import { voyageRouteLongLabel } from '../../domain/factories';
-import { Trash2 } from '../Icons';
+import { useVoyageStore } from '../../hooks/useVoyageStore';
+import { useToast } from '../../hooks/useToast';
+import { Trash2, Unlock } from '../Icons';
 import type { FuelKey, Leg, Ship, ShipClass, Voyage } from '../../types/domain';
 
 const FUEL_COLS: { key: keyof FuelTotals & string; label: FuelKey }[] = [
@@ -60,6 +62,8 @@ export function VoyageDetail({
   onEndVoyage,
   onDeleteVoyage,
 }: Props) {
+  const { reopenVoyage } = useVoyageStore();
+  const toast = useToast();
   const totals = calcVoyageTotals(voyage, shipClass);
   const ended = !!voyage.voyageEnd;
   const rob = lastReportRob(voyage);
@@ -68,6 +72,11 @@ export function VoyageDetail({
   const lubeOil = voyage.voyageEnd?.lubeOil || null;
 
   const filename = voyage.filename ?? '';
+
+  const handleReopen = () => {
+    reopenVoyage(filename);
+    toast.addToast('Voyage reopened — edits enabled. Re-close when finished.', 'info');
+  };
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -205,7 +214,17 @@ export function VoyageDetail({
         <div className="flex-1" />
         {editMode && (
           <div className="flex gap-2">
-            {!ended && (
+            {ended ? (
+              <button
+                type="button"
+                className="btn-warning px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5"
+                onClick={handleReopen}
+                title="Reopen voyage to allow edits — re-close when finished"
+              >
+                <Unlock className="w-3.5 h-3.5" />
+                Reopen voyage
+              </button>
+            ) : (
               <>
                 <button
                   type="button"
