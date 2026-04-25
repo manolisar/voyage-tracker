@@ -14,7 +14,7 @@ import { useEffect, useCallback, useState } from 'react';
 import { useSession } from '../../hooks/useSession';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { defaultDensities } from '../../domain/shipClass';
-import { defaultVoyageReport } from '../../domain/factories';
+import { defaultVoyageReport, inheritedCounter } from '../../domain/factories';
 import { EmptyState } from '../detail/EmptyState';
 import { VoyageDetail } from '../detail/VoyageDetail';
 import { ReportDetail } from '../detail/ReportDetail';
@@ -75,11 +75,15 @@ export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoy
               }
             }
             if (changedEndKey) {
-              // Snapshot end values from the NEW phase so the carry-over
-              // modal previews fresh numbers.
+              // Snapshot inherited values (end || start) from the NEW phase so
+              // the carry-over modal can offer every equipment with a known
+              // position — equipment whose end is empty but whose start is set
+              // (idle for this phase) still carries forward its last known
+              // counter, instead of being silently blanked downstream.
               const equipmentSnapshot: Record<string, string> = {};
               for (const [k, eq] of Object.entries(newPhase.equipment || {})) {
-                if (eq?.end !== '' && eq?.end != null) equipmentSnapshot[k] = eq.end;
+                const v = inheritedCounter(eq);
+                if (v) equipmentSnapshot[k] = v;
               }
               trackPhaseEnd({
                 filename,

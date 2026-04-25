@@ -31,6 +31,10 @@ export interface AddLegInput {
   depDate?: string;
   arrDate?: string;
   carryOverFrom?: { arrival?: { phases?: unknown[] } } | null;
+  // Optional pre-baked start values for the new leg's first departure phase.
+  // Used by the New-Voyage Import-Counters flow (voyage→voyage carry-over).
+  // Wins over carryOverFrom when both are provided.
+  initialCounters?: Record<string, string> | null;
 }
 
 export interface EndVoyageInput {

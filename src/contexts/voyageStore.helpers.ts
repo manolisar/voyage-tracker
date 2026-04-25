@@ -108,6 +108,31 @@ export interface VoyageListFilters {
   search: string;
 }
 
+// Returns the most recently ended voyage (excluding the given filename), or
+// null if none. Used by the New-Voyage flow to decide whether to offer the
+// counter-import modal — only meaningful when there's a prior voyage to
+// inherit counters from.
+//
+// Sort key: prefer endDate, fall back to startDate so a voyage that was
+// closed without an explicit endDate still ranks correctly relative to its
+// peers. Ties are broken by filename for stability.
+export function findPreviousEndedVoyage(
+  voyages: VoyageManifestEntry[],
+  excludeFilename: string | null,
+): VoyageManifestEntry | null {
+  const sortKey = (v: VoyageManifestEntry) => v.endDate || v.startDate || '';
+  const candidates = voyages.filter(
+    (v) => v.ended && v.filename !== excludeFilename,
+  );
+  if (!candidates.length) return null;
+  return candidates.slice().sort((a, b) => {
+    const ak = sortKey(a);
+    const bk = sortKey(b);
+    if (ak !== bk) return bk.localeCompare(ak);
+    return b.filename.localeCompare(a.filename);
+  })[0];
+}
+
 export function filterVoyages(
   voyages: VoyageManifestEntry[],
   { filter, search }: VoyageListFilters,

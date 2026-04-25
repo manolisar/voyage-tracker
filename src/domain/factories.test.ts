@@ -7,12 +7,41 @@ import {
   defaultVoyageEnd,
   voyageRouteLabel,
   voyageRouteLongLabel,
+  inheritedCounter,
 } from './factories';
 import { APP_VERSION, REPORT_TYPES } from './constants';
 import solsticeClassRaw from '../../public/ship-classes/solstice-class.json';
 import type { ShipClass } from '../types/domain';
 
 const solsticeClass = solsticeClassRaw as unknown as ShipClass;
+
+describe('inheritedCounter', () => {
+  it('returns end when end is non-empty', () => {
+    expect(inheritedCounter({ start: '100', end: '105' })).toBe('105');
+    expect(inheritedCounter({ start: '', end: '105' })).toBe('105');
+    expect(inheritedCounter({ start: '100', end: '0' })).toBe('0'); // '0' is a valid end value
+  });
+
+  it('falls back to start when end is empty (counter idle = position preserved)', () => {
+    expect(inheritedCounter({ start: '100', end: '' })).toBe('100');
+    expect(inheritedCounter({ start: '0', end: '' })).toBe('0');
+  });
+
+  it('returns "" when both start and end are empty', () => {
+    expect(inheritedCounter({ start: '', end: '' })).toBe('');
+  });
+
+  it('returns "" for null / undefined inputs', () => {
+    expect(inheritedCounter(null)).toBe('');
+    expect(inheritedCounter(undefined)).toBe('');
+  });
+
+  it('treats null/undefined fields as empty', () => {
+    expect(inheritedCounter({ start: null as unknown as string, end: null as unknown as string })).toBe('');
+    expect(inheritedCounter({ start: '100', end: undefined as unknown as string })).toBe('100');
+    expect(inheritedCounter({ start: undefined as unknown as string, end: '105' })).toBe('105');
+  });
+});
 
 describe('defaultVoyage', () => {
   it('returns a complete voyage shell', () => {

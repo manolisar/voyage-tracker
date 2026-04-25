@@ -4,9 +4,72 @@ import {
   manifestEntryFrom,
   findNextPhaseFor,
   filterVoyages,
+  findPreviousEndedVoyage,
   type PhaseSource,
 } from './voyageStore.helpers';
 import type { Voyage, VoyageManifestEntry } from '../types/domain';
+
+const emptyPort = { code: '', name: '', country: '', locode: '' };
+function entry(over: Partial<VoyageManifestEntry>): VoyageManifestEntry {
+  return {
+    filename: 'x.json',
+    id: 0,
+    fromPort: emptyPort,
+    toPort: emptyPort,
+    startDate: '',
+    endDate: '',
+    ended: false,
+    ...over,
+  };
+}
+
+describe('findPreviousEndedVoyage', () => {
+  it('returns null when no voyages are ended', () => {
+    const list = [
+      entry({ filename: 'a.json', ended: false, startDate: '2026-01-01' }),
+      entry({ filename: 'b.json', ended: false, startDate: '2026-02-01' }),
+    ];
+    expect(findPreviousEndedVoyage(list, null)).toBeNull();
+  });
+
+  it('returns null on an empty list', () => {
+    expect(findPreviousEndedVoyage([], null)).toBeNull();
+  });
+
+  it('returns the most recently ended voyage by endDate', () => {
+    const list = [
+      entry({ filename: 'a.json', ended: true, startDate: '2026-01-01', endDate: '2026-01-10' }),
+      entry({ filename: 'b.json', ended: true, startDate: '2026-02-01', endDate: '2026-02-10' }),
+      entry({ filename: 'c.json', ended: true, startDate: '2026-03-01', endDate: '2026-03-10' }),
+    ];
+    expect(findPreviousEndedVoyage(list, null)?.filename).toBe('c.json');
+  });
+
+  it('falls back to startDate when endDate is missing', () => {
+    const list = [
+      entry({ filename: 'a.json', ended: true, startDate: '2026-02-01', endDate: '' }),
+      entry({ filename: 'b.json', ended: true, startDate: '2026-01-01', endDate: '2026-01-15' }),
+    ];
+    // a's startDate (2026-02-01) > b's endDate (2026-01-15)
+    expect(findPreviousEndedVoyage(list, null)?.filename).toBe('a.json');
+  });
+
+  it('excludes the current voyage by filename', () => {
+    const list = [
+      entry({ filename: 'current.json', ended: true, startDate: '2026-03-01', endDate: '2026-03-10' }),
+      entry({ filename: 'older.json', ended: true, startDate: '2026-01-01', endDate: '2026-01-10' }),
+    ];
+    expect(findPreviousEndedVoyage(list, 'current.json')?.filename).toBe('older.json');
+  });
+
+  it('excludes non-ended voyages even if they are more recent', () => {
+    const list = [
+      entry({ filename: 'active.json', ended: false, startDate: '2026-03-01' }),
+      entry({ filename: 'old-ended.json', ended: true, startDate: '2026-01-01', endDate: '2026-01-10' }),
+    ];
+    expect(findPreviousEndedVoyage(list, null)?.filename).toBe('old-ended.json');
+  });
+});
 
 describe('buildFilename', () => {
   it('produces the v7 filename shape', () => {

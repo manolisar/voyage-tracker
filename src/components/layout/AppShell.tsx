@@ -8,6 +8,7 @@ import { useSession } from '../../hooks/useSession';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { loadShips, loadShipClass } from '../../domain/shipClass';
 import { VoyageStoreProvider } from '../../contexts/VoyageStoreProvider';
+import { findPreviousEndedVoyage } from '../../contexts/voyageStore.helpers';
 import { TopBar } from './TopBar';
 import { DetailPane } from './DetailPane';
 import { VoyageTree } from '../tree/VoyageTree';
@@ -17,9 +18,10 @@ import { AddLegModal } from '../modals/AddLegModal';
 import { VoyageEndModal } from '../modals/VoyageEndModal';
 import { DeleteVoyageModal } from '../modals/DeleteVoyageModal';
 import { StaleFileModal } from '../modals/StaleFileModal';
+import { ImportCountersModal } from '../modals/ImportCountersModal';
 import { HelpModal } from '../modals/HelpModal';
 import { Eye } from '../Icons';
-import type { Ship, ShipClass } from '../../types/domain';
+import type { Ship, ShipClass, Voyage } from '../../types/domain';
 
 export function AppShell() {
   const { shipId, editMode, enterEditMode } = useSession();
@@ -153,13 +155,12 @@ export function AppShell() {
           <HelpModal onClose={() => setHelpOpen(false)} />
         )}
 
-        {newVoyageOpen && (
-          <NewVoyageModal
-            ship={ship}
-            shipClass={shipClass}
-            onClose={() => setNewVoyageOpen(false)}
-          />
-        )}
+        <NewVoyageFlow
+          open={newVoyageOpen}
+          ship={ship}
+          shipClass={shipClass}
+          onClose={() => setNewVoyageOpen(false)}
+        />
 
         {addLegFor && (
           <AddLegModal
@@ -187,6 +188,94 @@ export function AppShell() {
         <StaleFileModalHost />
       </div>
     </VoyageStoreProvider>
+  );
+}
+
+// New-Voyage flow chainer — renders inside VoyageStoreProvider so it can read
+// the manifest and load the previous voyage. Sequence:
+//   1. NewVoyageModal collects ports/dates and creates the voyage on submit.
+//   2. On success, look for a previous ENDED voyage on this ship.
+//      - None → open AddLegModal so the chief can add the first leg fresh.
+//      - Found → load it and open ImportCountersModal.
+//   3. ImportCountersModal:
+//      - Start Fresh / dismiss → open AddLegModal with no initialCounters.
+//      - Import → open AddLegModal with the chosen counters pre-filled into
+//        the new leg's first departure phase.
+function NewVoyageFlow({
+  open,
+  ship,
+  shipClass,
+  onClose,
+}: {
+  open: boolean;
+  ship: Ship | null | undefined;
+  shipClass: ShipClass | null;
+  onClose: () => void;
+}) {
+  const { voyages, loadVoyage } = useVoyageStore();
+  const [importFor, setImportFor] = useState<{
+    newFilename: string;
+    prevVoyage: Voyage;
+  } | null>(null);
+  const [pendingFirstLeg, setPendingFirstLeg] = useState<{
+    filename: string;
+    initialCounters?: Record<string, string>;
+  } | null>(null);
+
+  const handleNewVoyageClose = async (createdFilename?: string) => {
+    onClose();
+    if (!createdFilename) return;
+    const prev = findPreviousEndedVoyage(voyages, createdFilename);
+    if (!prev) {
+      setPendingFirstLeg({ filename: createdFilename });
+      return;
+    }
+    try {
+      const prevVoyage = await loadVoyage(prev.filename);
+      if (prevVoyage) {
+        setImportFor({ newFilename: createdFilename, prevVoyage });
+        return;
+      }
+    } catch (e) {
+      console.warn('[NewVoyageFlow] failed to load previous voyage', e);
+    }
+    // Fall back to fresh first-leg if loading the previous voyage fails.
+    setPendingFirstLeg({ filename: createdFilename });
+  };
+
+  return (
+    <>
+      {open && (
+        <NewVoyageModal
+          ship={ship}
+          shipClass={shipClass}
+          onClose={handleNewVoyageClose}
+        />
+      )}
+      {importFor && shipClass && (
+        <ImportCountersModal
+          prevVoyage={importFor.prevVoyage}
+          shipClass={shipClass}
+          onStartFresh={() => {
+            setPendingFirstLeg({ filename: importFor.newFilename });
+            setImportFor(null);
+          }}
+          onImport={(counters) => {
+            setPendingFirstLeg({ filename: importFor.newFilename, initialCounters: counters });
+            setImportFor(null);
+          }}
+          onClose={() => setImportFor(null)}
+        />
+      )}
+      {pendingFirstLeg && (
+        <AddLegModal
+          filename={pendingFirstLeg.filename}
+          shipClass={shipClass}
+          initialCounters={pendingFirstLeg.initialCounters}
+          onClose={() => setPendingFirstLeg(null)}
+        />
+      )}
+    </>
   );
 }
 

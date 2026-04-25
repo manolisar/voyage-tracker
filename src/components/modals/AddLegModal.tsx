@@ -12,20 +12,25 @@ import type { ShipClass } from '../../types/domain';
 interface Props {
   filename: string;
   shipClass: ShipClass | null;
+  // When set, the new leg's first departure phase starts are pre-populated
+  // with these counters and the leg→leg "Carry over" checkbox is hidden
+  // (the source has already been chosen at the voyage level).
+  initialCounters?: Record<string, string> | null;
   onClose: () => void;
 }
 
-export function AddLegModal({ filename, shipClass, onClose }: Props) {
+export function AddLegModal({ filename, shipClass, initialCounters = null, onClose }: Props) {
   const { loadedById, addLeg } = useVoyageStore();
   const voyage = loadedById[filename];
   const lastLeg = voyage?.legs?.[voyage.legs.length - 1] || null;
   const suggestedFrom = useMemo(() => lastLeg?.arrival?.port || '', [lastLeg]);
+  const hasInitialCounters = !!initialCounters && Object.keys(initialCounters).length > 0;
 
   const [fromPort, setFromPort] = useState(suggestedFrom);
   const [toPort, setToPort] = useState('');
-  const [depDate, setDepDate] = useState(lastLeg?.arrival?.date || '');
+  const [depDate, setDepDate] = useState(lastLeg?.arrival?.date || voyage?.startDate || '');
   const [arrDate, setArrDate] = useState('');
-  const [carryOver, setCarryOver] = useState(!!lastLeg);
+  const [carryOver, setCarryOver] = useState(!!lastLeg && !hasInitialCounters);
   const [error, setError] = useState<string | null>(null);
 
   useEscapeKey(onClose);
@@ -42,7 +47,8 @@ export function AddLegModal({ filename, shipClass, onClose }: Props) {
         toPort: toPort.trim(),
         depDate,
         arrDate,
-        carryOverFrom: carryOver ? lastLeg : null,
+        carryOverFrom: carryOver && !hasInitialCounters ? lastLeg : null,
+        initialCounters: hasInitialCounters ? initialCounters : null,
       });
       onClose();
     } catch (err) {
@@ -122,7 +128,21 @@ export function AddLegModal({ filename, shipClass, onClose }: Props) {
             </div>
           </div>
 
-          {lastLeg && (
+          {hasInitialCounters && (
+            <div
+              className="rounded-xl p-3 text-[0.78rem]"
+              style={{ background: 'var(--color-surface2)', border: '1px solid var(--color-border-subtle)', color: 'var(--color-dim)' }}
+            >
+              <div className="font-semibold" style={{ color: 'var(--color-text)' }}>
+                Importing counters from previous voyage
+              </div>
+              <div className="text-[0.72rem] font-mono mt-0.5">
+                {Object.keys(initialCounters || {}).length} counter{Object.keys(initialCounters || {}).length === 1 ? '' : 's'} will populate the first departure phase START values.
+              </div>
+            </div>
+          )}
+
+          {lastLeg && !hasInitialCounters && (
             <label
               className="rounded-xl p-3 flex gap-3 items-start cursor-pointer"
               style={{ background: 'var(--color-surface2)', border: '1px solid var(--color-border-subtle)' }}

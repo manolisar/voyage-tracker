@@ -14,7 +14,9 @@ import type { PortRef, Ship, ShipClass } from '../../types/domain';
 interface Props {
   ship: Ship | null | undefined;
   shipClass: ShipClass | null;
-  onClose: () => void;
+  // Receives the created voyage's filename on success so the parent can chain
+  // into the Import-Counters flow. Called with no arg on cancel.
+  onClose: (createdFilename?: string) => void;
 }
 
 export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
@@ -36,7 +38,7 @@ export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
     setBusy(true);
     setError(null);
     try {
-      await createVoyage({
+      const createdFilename = await createVoyage({
         shipClass,
         shipCode: ship.code,
         fromPort,
@@ -44,7 +46,7 @@ export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
         startDate,
         endDate,
       });
-      onClose();
+      onClose(createdFilename);
     } catch (err) {
       console.error('[NewVoyageModal] create failed', err);
       setError((err as Error)?.message || 'Failed to create voyage.');
@@ -53,7 +55,7 @@ export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
   }
 
   return (
-    <div className="modal-overlay" onClick={busy ? undefined : onClose} role="presentation">
+    <div className="modal-overlay" onClick={busy ? undefined : () => onClose()} role="presentation">
       <div
         className="modal-content w-full max-w-xl"
         onClick={(e) => e.stopPropagation()}
@@ -68,7 +70,7 @@ export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
               type="button"
               className="p-1 rounded hover:bg-black/10"
               aria-label="Close"
-              onClick={onClose}
+              onClick={() => onClose()}
             >
               <X className="w-5 h-5" />
             </button>
@@ -133,7 +135,7 @@ export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
             <button
               type="button"
               className="btn-flat px-4 py-2 rounded-lg text-sm"
-              onClick={onClose}
+              onClick={() => onClose()}
               disabled={busy}
             >
               Cancel

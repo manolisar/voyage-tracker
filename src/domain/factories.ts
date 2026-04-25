@@ -26,6 +26,19 @@ export function defaultEquipment(shipClass: ShipClass): Record<string, Equipment
   }, {});
 }
 
+// Single source of truth for "what value carries forward from this equipment
+// reading?". An END value wins when set; if the equipment was idle for the
+// phase (end empty) we fall back to its START — counters that didn't move
+// keep their position rather than being lost. Both empty → '' (skip).
+export function inheritedCounter(
+  eq: { start?: string | null; end?: string | null } | null | undefined,
+): string {
+  if (!eq) return '';
+  if (eq.end !== '' && eq.end != null) return eq.end;
+  if (eq.start !== '' && eq.start != null) return eq.start;
+  return '';
+}
+
 export function createPhase(shipClass: ShipClass, type: string, name = ''): Phase {
   return {
     id: newId(),

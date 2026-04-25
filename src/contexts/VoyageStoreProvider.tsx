@@ -41,6 +41,7 @@ import {
   defaultVoyage,
   defaultLeg,
   defaultVoyageEnd,
+  inheritedCounter,
 } from '../domain/factories';
 import type {
   Selection,
@@ -592,6 +593,7 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
         depDate = '',
         arrDate = '',
         carryOverFrom = null,
+        initialCounters = null,
       }: AddLegInput,
     ): number => {
       if (!shipClass) throw new Error('addLeg: shipClass required');
@@ -601,19 +603,32 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       if (depDate) leg.departure.date = depDate;
       if (arrDate) leg.arrival.date = arrDate;
 
+      // Voyage-level import (selective per-equipment) wins when present —
+      // this is the "Import Counters from previous voyage" path. Per-equipment
+      // entries with empty values are skipped (the user deselected = RESET).
+      if (initialCounters) {
+        for (const [key, val] of Object.entries(initialCounters)) {
+          const cell = leg.departure.phases[0]?.equipment[key];
+          if (cell && val) cell.start = String(val);
+        }
+      }
+
       if (carryOverFrom?.arrival?.phases) {
         const srcPhases = carryOverFrom.arrival.phases as Array<{
-          equipment?: Record<string, { end?: string }>;
+          equipment?: Record<string, { start?: string; end?: string }>;
         }>;
         const srcLast = srcPhases[srcPhases.length - 1];
         if (srcLast?.equipment) {
+          // Inherit each equipment's last known position. END wins; if END is
+          // empty (equipment idle for that phase) we fall back to its START so
+          // the counter doesn't get blanked. Both empty → skip (target stays '').
           for (const key of Object.keys(leg.departure.phases[0]?.equipment || {})) {
-            const endVal = srcLast.equipment[key]?.end;
-            if (endVal) leg.departure.phases[0].equipment[key].start = endVal;
+            const v = inheritedCounter(srcLast.equipment[key]);
+            if (v) leg.departure.phases[0].equipment[key].start = v;
           }
           for (const key of Object.keys(leg.arrival.phases[0]?.equipment || {})) {
-            const endVal = srcLast.equipment[key]?.end;
-            if (endVal) leg.arrival.phases[0].equipment[key].start = endVal;
+            const v = inheritedCounter(srcLast.equipment[key]);
+            if (v) leg.arrival.phases[0].equipment[key].start = v;
           }
         }
       }
