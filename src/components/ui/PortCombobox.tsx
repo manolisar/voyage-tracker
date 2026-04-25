@@ -9,7 +9,8 @@
 //     for name + country; on confirm the port is persisted to IDB under
 //     customPorts/<shipId> and bubbles up via onChange.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSession } from '../../hooks/useSession';
 import { loadPorts } from '../../domain/ports';
 import { getCustomPorts, addCustomPort } from '../../storage/indexeddb';
@@ -51,6 +52,10 @@ export function PortCombobox({
   const [pendingUnknown, setPendingUnknown] = useState<PendingUnknown | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLUListElement | null>(null);
+  // Dropdown coordinates in viewport (fixed) coords. Recomputed on open and
+  // on scroll/resize so the popup tracks the input. Rendered via portal so
+  // the modal's `overflow: hidden` scrollbox can't clip it.
+  const [popoverRect, setPopoverRect] = useState<{ top: number; left: number; width: number } | null>(null);
 
   // Keep the input synced if the parent replaces `value` externally (form
   // reset, clear, etc.). This is the "adjust state during render" pattern
@@ -86,6 +91,29 @@ export function PortCombobox({
       alive = false;
     };
   }, [shipId]);
+
+  // Track input position in viewport so the portal'd dropdown sits flush
+  // beneath it. Recomputed on open + on any scroll/resize while open so the
+  // popup tracks the input even when the modal scrollbox moves.
+  useLayoutEffect(() => {
+    if (!open || !inputRef.current) {
+      setPopoverRect(null);
+      return undefined;
+    }
+    const update = () => {
+      const el = inputRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setPopoverRect({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [open, pendingUnknown]);
 
   const merged = useMemo<PortRef[]>(() => {
     // Customs first so the user sees their own ports at the top of suggestions.
@@ -212,12 +240,20 @@ export function PortCombobox({
         autoFocus={autoFocus}
         maxLength={5}
       />
-      {open && !pendingUnknown && matches.length > 0 && (
+      {open && !pendingUnknown && matches.length > 0 && popoverRect && createPortal(
         <ul
           ref={listRef}
-          className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-lg shadow-lg"
+          className="max-h-64 overflow-auto rounded-lg shadow-lg"
           role="listbox"
-          style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-subtle)' }}
+          style={{
+            position: 'fixed',
+            top: popoverRect.top,
+            left: popoverRect.left,
+            width: popoverRect.width,
+            zIndex: 1100,
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border-subtle)',
+          }}
         >
           {matches.map((p, i) => (
             <li
@@ -249,7 +285,8 @@ export function PortCombobox({
               )}
             </li>
           ))}
-        </ul>
+        </ul>,
+        document.body,
       )}
       {pendingUnknown && (
         <div
