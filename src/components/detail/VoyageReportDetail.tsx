@@ -1,0 +1,31 @@
+// @ts-nocheck
+// VoyageReportDetail — read-only Voyage Report.
+// Renders the exact same <VoyageReportSection> used in edit mode but with
+// `readOnly`, guaranteeing pixel-level parity between view and edit.
+
+import { VoyageReportSection } from '../voyage/VoyageReportSection';
+
+export function VoyageReportDetail({ leg }) {
+  const vr = leg?.voyageReport;
+  if (!vr) {
+    return (
+      <div className="max-w-3xl mx-auto p-6 text-center">
+        <p style={{ color: 'var(--color-dim)' }}>No voyage report on this leg.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-5xl mx-auto">
+      <VoyageReportSection
+        voyageReport={vr}
+        onChange={() => {}}
+        depPort={leg.departure?.port}
+        arrPort={leg.arrival?.port}
+        depDate={leg.departure?.date}
+        arrDate={leg.arrival?.date}
+        readOnly
+      />
+    </div>
+  );
+}

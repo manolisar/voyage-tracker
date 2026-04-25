@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "id": "solstice-class",
+  "displayName": "Solstice-class",
+  "fuels": ["HFO", "MGO", "LSFO"],
+  "defaultDensities": {
+    "HFO": 0.92,
+    "MGO": 0.83,
+    "LSFO": 0.92
+  },
+  "equipment": [
+    { "key": "dg12",    "label": "DG 1-2",    "category": "engine", "defaultFuel": "HFO", "allowedFuels": ["HFO", "MGO", "LSFO"], "locked": false },
+    { "key": "dg4",     "label": "DG 4",      "category": "engine", "defaultFuel": "HFO", "allowedFuels": ["HFO", "MGO", "LSFO"], "locked": false },
+    { "key": "dg3",     "label": "DG 3",      "category": "engine", "defaultFuel": "MGO", "allowedFuels": ["MGO", "LSFO"],        "locked": false },
+    { "key": "boiler1", "label": "Boiler 1",  "category": "boiler", "defaultFuel": "MGO", "allowedFuels": ["MGO"],                "locked": true  },
+    { "key": "boiler2", "label": "Boiler 2",  "category": "boiler", "defaultFuel": "MGO", "allowedFuels": ["MGO"],                "locked": true  }
+  ],
+  "phaseTemplates": {
+    "departure": [
+      { "type": "port",    "name": "FWE \u2192 SBE (In Port)" },
+      { "type": "standby", "name": "SBE \u2192 FA (Stand By Departure)" }
+    ],
+    "arrival": [
+      { "type": "sea",     "name": "FA \u2192 SBE (Sea Passage)" },
+      { "type": "standby", "name": "SBE \u2192 FWE (Stand By Arrival)" }
+    ]
+  }
+}

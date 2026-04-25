@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Voyage Tracker — Redirecting…</title>
+  <meta http-equiv="refresh" content="0; url=/voyage-tracker-v8/" />
+  <script>
+    // GitHub Pages 404 → SPA redirect.
+    // The base path /voyage-tracker-v8/ matches vite.config.ts.
+    // Preserve any hash route the user typed so deep-links survive.
+    (function () {
+      var base = '/voyage-tracker-v8/';
+      var loc  = window.location;
+      var dest = loc.origin + base + (loc.hash || '');
+      if (loc.href !== dest) loc.replace(dest);
+    })();
+  </script>
+  <style>
+    body { font: 14px/1.5 system-ui, sans-serif; padding: 2rem; color: #475569; }
+    a { color: #0284c7; }
+  </style>
+</head>
+<body>
+  <p>Redirecting to <a href="/voyage-tracker-v8/">Voyage Tracker</a>…</p>
+</body>
+</html>

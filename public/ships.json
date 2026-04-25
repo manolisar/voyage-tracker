@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "ships": [
+    { "id": "solstice",   "code": "SL", "displayName": "Celebrity Solstice",   "classId": "solstice-class", "yearBuilt": 2008, "active": true },
+    { "id": "equinox",    "code": "EQ", "displayName": "Celebrity Equinox",    "classId": "solstice-class", "yearBuilt": 2009, "active": true },
+    { "id": "eclipse",    "code": "EC", "displayName": "Celebrity Eclipse",    "classId": "solstice-class", "yearBuilt": 2010, "active": true },
+    { "id": "silhouette", "code": "SI", "displayName": "Celebrity Silhouette", "classId": "solstice-class", "yearBuilt": 2011, "active": true },
+    { "id": "reflection", "code": "RF", "displayName": "Celebrity Reflection", "classId": "solstice-class", "yearBuilt": 2012, "active": true }
+  ]
+}

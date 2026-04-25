@@ -1,0 +1,320 @@
+{
+  "id": 1737000000000,
+  "shipId": "solstice",
+  "classId": "solstice-class",
+  "name": "MIA-CCY-NAS-MIA",
+  "startDate": "2026-01-15",
+  "endDate": "2026-01-19",
+  "densities": {
+    "HFO": 0.92,
+    "MGO": 0.83,
+    "LSFO": 0.92
+  },
+  "lastModified": "2026-01-19T08:30:00.000Z",
+  "version": "7.0.0",
+  "filename": "2026-01-15_MIA-CCY-NAS-MIA.json",
+  "legs": [
+    {
+      "id": 1737000001,
+      "voyageReport": null,
+      "departure": {
+        "id": 1737000010,
+        "type": "departure",
+        "date": "2026-01-15",
+        "port": "Miami, FL (MIA)",
+        "timeEvents": { "sbe": "16:00", "fwe": "", "fa": "17:30" },
+        "engineer": "C. Karras (Chief)",
+        "rob":      { "hfo": "720.0", "mgo": "180.5", "lsfo": "95.0" },
+        "bunkered": { "hfo": "0",     "mgo": "0",     "lsfo": "0"    },
+        "freshWater": { "rob": "", "bunkered": "", "production": "", "consumption": "" },
+        "aep":        { "openLoopHrs": "", "closedLoopHrs": "", "alkaliCons": "", "alkaliRob": "" },
+        "phases": [
+          {
+            "id": 1737000020,
+            "type": "port",
+            "name": "FWE → SBE (In Port)",
+            "remarks": "Hotel load, DG3/B2 secured.",
+            "equipment": {
+              "dg12":    { "start": "145200.5", "end": "145232.5", "fuel": "HFO" },
+              "dg4":     { "start": "89650.3",  "end": "89668.3",  "fuel": "HFO" },
+              "dg3":     { "start": "12840.7",  "end": "12840.7",  "fuel": "MGO" },
+              "boiler1": { "start": "8450.2",   "end": "8458.5",   "fuel": "MGO" },
+              "boiler2": { "start": "9120.8",   "end": "9120.8",   "fuel": "MGO" }
+            }
+          },
+          {
+            "id": 1737000021,
+            "type": "standby",
+            "name": "SBE → FA (Stand By Departure)",
+            "remarks": "",
+            "equipment": {
+              "dg12":    { "start": "145232.5", "end": "145236.5", "fuel": "HFO" },
+              "dg4":     { "start": "89668.3",  "end": "89672.3",  "fuel": "HFO" },
+              "dg3":     { "start": "12840.7",  "end": "12842.5",  "fuel": "MGO" },
+              "boiler1": { "start": "8458.5",   "end": "8459.7",   "fuel": "MGO" },
+              "boiler2": { "start": "9120.8",   "end": "9120.8",   "fuel": "MGO" }
+            }
+          }
+        ]
+      },
+      "arrival": {
+        "id": 1737000011,
+        "type": "arrival",
+        "date": "2026-01-16",
+        "port": "CocoCay, Bahamas (CCY)",
+        "timeEvents": { "sbe": "06:30", "fwe": "08:00", "fa": "" },
+        "engineer": "M. Petridis (2nd Eng)",
+        "rob":      { "hfo": "667.4", "mgo": "175.2", "lsfo": "95.0" },
+        "bunkered": { "hfo": "0", "mgo": "0", "lsfo": "0" },
+        "freshWater":  { "rob": "1850", "bunkered": "0",   "production": "180", "consumption": "210" },
+        "aep":         { "openLoopHrs": "12.5", "closedLoopHrs": "0",   "alkaliCons": "0",   "alkaliRob": "4200" },
+        "phases": [
+          {
+            "id": 1737000022,
+            "type": "sea",
+            "name": "FA → SBE (Sea Passage)",
+            "remarks": "Calm seas, 18 kn average.",
+            "equipment": {
+              "dg12":    { "start": "145236.5", "end": "145289.5", "fuel": "HFO" },
+              "dg4":     { "start": "89672.3",  "end": "89711.3",  "fuel": "HFO" },
+              "dg3":     { "start": "12842.5",  "end": "12842.5",  "fuel": "MGO" },
+              "boiler1": { "start": "8459.7",   "end": "8470.5",   "fuel": "MGO" },
+              "boiler2": { "start": "9120.8",   "end": "9120.8",   "fuel": "MGO" }
+            }
+          },
+          {
+            "id": 1737000023,
+            "type": "standby",
+            "name": "SBE → FWE (Stand By Arrival)",
+            "remarks": "",
+            "equipment": {
+              "dg12":    { "start": "145289.5", "end": "145293.5", "fuel": "HFO" },
+              "dg4":     { "start": "89711.3",  "end": "89715.3",  "fuel": "HFO" },
+              "dg3":     { "start": "12842.5",  "end": "12844.3",  "fuel": "MGO" },
+              "boiler1": { "start": "8470.5",   "end": "8471.7",   "fuel": "MGO" },
+              "boiler2": { "start": "9120.8",   "end": "9120.8",   "fuel": "MGO" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 1737000002,
+      "voyageReport": {
+        "departure": {
+          "sbe": "17:00",
+          "fa": "18:00",
+          "pierToFA": { "distance": "2.4", "time": "1.0", "avgSpeed": "2.4" }
+        },
+        "voyage": {
+          "totalMiles": "212",
+          "steamingTime": "11.5",
+          "averageSpeed": "18.4"
+        },
+        "arrival": {
+          "sbe": "05:30",
+          "fwe": "06:30",
+          "sbeToBerth": { "distance": "1.8", "time": "1.0", "avgSpeed": "1.8" }
+        }
+      },
+      "departure": {
+        "id": 1737000012,
+        "type": "departure",
+        "date": "2026-01-16",
+        "port": "CocoCay, Bahamas (CCY)",
+        "timeEvents": { "sbe": "17:00", "fwe": "", "fa": "18:00" },
+        "engineer": "C. Karras (Chief)",
+        "rob":      { "hfo": "627.0", "mgo": "172.7", "lsfo": "95.0" },
+        "bunkered": { "hfo": "0", "mgo": "0", "lsfo": "0" },
+        "freshWater": { "rob": "", "bunkered": "", "production": "", "consumption": "" },
+        "aep":        { "openLoopHrs": "", "closedLoopHrs": "", "alkaliCons": "", "alkaliRob": "" },
+        "phases": [
+          {
+            "id": 1737000030,
+            "type": "port",
+            "name": "FWE → SBE (In Port)",
+            "remarks": "Tender ops; B1 carrying hotel steam.",
+            "equipment": {
+              "dg12":    { "start": "145293.5", "end": "145317.5", "fuel": "HFO" },
+              "dg4":     { "start": "89715.3",  "end": "89729.3",  "fuel": "HFO" },
+              "dg3":     { "start": "12844.3",  "end": "12844.3",  "fuel": "MGO" },
+              "boiler1": { "start": "8471.7",   "end": "8478.0",   "fuel": "MGO" },
+              "boiler2": { "start": "9120.8",   "end": "9120.8",   "fuel": "MGO" }
+            }
+          },
+          {
+            "id": 1737000031,
+            "type": "standby",
+            "name": "SBE → FA (Stand By Departure)",
+            "remarks": "",
+            "equipment": {
+              "dg12":    { "start": "145317.5", "end": "145320.5", "fuel": "HFO" },
+              "dg4":     { "start": "89729.3",  "end": "89732.3",  "fuel": "HFO" },
+              "dg3":     { "start": "12844.3",  "end": "12845.5",  "fuel": "MGO" },
+              "boiler1": { "start": "8478.0",   "end": "8478.8",   "fuel": "MGO" },
+              "boiler2": { "start": "9120.8",   "end": "9120.8",   "fuel": "MGO" }
+            }
+          }
+        ]
+      },
+      "arrival": {
+        "id": 1737000013,
+        "type": "arrival",
+        "date": "2026-01-17",
+        "port": "Nassau, Bahamas (NAS)",
+        "timeEvents": { "sbe": "05:30", "fwe": "06:30", "fa": "" },
+        "engineer": "M. Petridis (2nd Eng)",
+        "rob":      { "hfo": "590.5", "mgo": "168.5", "lsfo": "95.0" },
+        "bunkered": { "hfo": "0", "mgo": "0", "lsfo": "0" },
+        "freshWater":  { "rob": "1740", "bunkered": "0",   "production": "165", "consumption": "275" },
+        "aep":         { "openLoopHrs": "11.0", "closedLoopHrs": "0",   "alkaliCons": "0",   "alkaliRob": "4200" },
+        "phases": [
+          {
+            "id": 1737000032,
+            "type": "sea",
+            "name": "FA → SBE (Sea Passage)",
+            "remarks": "Following sea, fair wind.",
+            "equipment": {
+              "dg12":    { "start": "145320.5", "end": "145368.5", "fuel": "HFO" },
+              "dg4":     { "start": "89732.3",  "end": "89767.3",  "fuel": "HFO" },
+              "dg3":     { "start": "12845.5",  "end": "12845.5",  "fuel": "MGO" },
+              "boiler1": { "start": "8478.8",   "end": "8488.0",   "fuel": "MGO" },
+              "boiler2": { "start": "9120.8",   "end": "9120.8",   "fuel": "MGO" }
+            }
+          },
+          {
+            "id": 1737000033,
+            "type": "standby",
+            "name": "SBE → FWE (Stand By Arrival)",
+            "remarks": "",
+            "equipment": {
+              "dg12":    { "start": "145368.5", "end": "145371.5", "fuel": "HFO" },
+              "dg4":     { "start": "89767.3",  "end": "89770.3",  "fuel": "HFO" },
+              "dg3":     { "start": "12845.5",  "end": "12846.7",  "fuel": "MGO" },
+              "boiler1": { "start": "8488.0",   "end": "8488.8",   "fuel": "MGO" },
+              "boiler2": { "start": "9120.8",   "end": "9120.8",   "fuel": "MGO" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 1737000003,
+      "voyageReport": null,
+      "departure": {
+        "id": 1737000014,
+        "type": "departure",
+        "date": "2026-01-17",
+        "port": "Nassau, Bahamas (NAS)",
+        "timeEvents": { "sbe": "18:30", "fwe": "", "fa": "19:30" },
+        "engineer": "C. Karras (Chief)",
+        "rob":      { "hfo": "557.0", "mgo": "215.4", "lsfo": "295.0" },
+        "bunkered": { "hfo": "0", "mgo": "50",  "lsfo": "200" },
+        "freshWater": { "rob": "", "bunkered": "", "production": "", "consumption": "" },
+        "aep":        { "openLoopHrs": "", "closedLoopHrs": "", "alkaliCons": "", "alkaliRob": "" },
+        "phases": [
+          {
+            "id": 1737000040,
+            "type": "port",
+            "name": "FWE → SBE (In Port)",
+            "remarks": "Bunkered MGO 50 MT, LSFO 200 MT for ECA approach.",
+            "equipment": {
+              "dg12":    { "start": "145371.5", "end": "145399.5", "fuel": "HFO" },
+              "dg4":     { "start": "89770.3",  "end": "89786.3",  "fuel": "HFO" },
+              "dg3":     { "start": "12846.7",  "end": "12846.7",  "fuel": "MGO" },
+              "boiler1": { "start": "8488.8",   "end": "8496.0",   "fuel": "MGO" },
+              "boiler2": { "start": "9120.8",   "end": "9120.8",   "fuel": "MGO" }
+            }
+          },
+          {
+            "id": 1737000041,
+            "type": "standby",
+            "name": "SBE → FA (Stand By Departure)",
+            "remarks": "",
+            "equipment": {
+              "dg12":    { "start": "145399.5", "end": "145402.5", "fuel": "HFO" },
+              "dg4":     { "start": "89786.3",  "end": "89789.3",  "fuel": "HFO" },
+              "dg3":     { "start": "12846.7",  "end": "12848.0",  "fuel": "MGO" },
+              "boiler1": { "start": "8496.0",   "end": "8496.9",   "fuel": "MGO" },
+              "boiler2": { "start": "9120.8",   "end": "9120.8",   "fuel": "MGO" }
+            }
+          }
+        ]
+      },
+      "arrival": {
+        "id": 1737000015,
+        "type": "arrival",
+        "date": "2026-01-19",
+        "port": "Miami, FL (MIA)",
+        "timeEvents": { "sbe": "06:00", "fwe": "07:30", "fa": "" },
+        "engineer": "C. Karras (Chief)",
+        "rob":      { "hfo": "405.0", "mgo": "208.3", "lsfo": "194.4" },
+        "bunkered": { "hfo": "0", "mgo": "0", "lsfo": "0" },
+        "freshWater":  { "rob": "1480", "bunkered": "0",   "production": "320", "consumption": "580" },
+        "aep":         { "openLoopHrs": "18.5", "closedLoopHrs": "16.0", "alkaliCons": "85", "alkaliRob": "4115" },
+        "phases": [
+          {
+            "id": 1737000042,
+            "type": "sea",
+            "name": "FA → ECA boundary (HFO)",
+            "remarks": "ECA boundary crossed at 14:00 / 18 Jan.",
+            "equipment": {
+              "dg12":    { "start": "145402.5", "end": "145477.5", "fuel": "HFO" },
+              "dg4":     { "start": "89789.3",  "end": "89844.0",  "fuel": "HFO" },
+              "dg3":     { "start": "12848.0",  "end": "12848.0",  "fuel": "MGO" },
+              "boiler1": { "start": "8496.9",   "end": "8512.0",   "fuel": "MGO" },
+              "boiler2": { "start": "9120.8",   "end": "9120.8",   "fuel": "MGO" }
+            }
+          },
+          {
+            "id": 1737000043,
+            "type": "sea",
+            "name": "ECA boundary → SBE (LSFO)",
+            "remarks": "Fuel changeover HFO → LSFO completed at 14:30.",
+            "equipment": {
+              "dg12":    { "start": "145477.5", "end": "145537.0", "fuel": "LSFO" },
+              "dg4":     { "start": "89844.0",  "end": "89888.5",  "fuel": "LSFO" },
+              "dg3":     { "start": "12848.0",  "end": "12848.0",  "fuel": "MGO" },
+              "boiler1": { "start": "8512.0",   "end": "8525.0",   "fuel": "MGO" },
+              "boiler2": { "start": "9120.8",   "end": "9120.8",   "fuel": "MGO" }
+            }
+          },
+          {
+            "id": 1737000044,
+            "type": "standby",
+            "name": "SBE → FWE (Stand By Arrival)",
+            "remarks": "",
+            "equipment": {
+              "dg12":    { "start": "145537.0", "end": "145541.5", "fuel": "LSFO" },
+              "dg4":     { "start": "89888.5",  "end": "89893.0",  "fuel": "LSFO" },
+              "dg3":     { "start": "12848.0",  "end": "12849.5",  "fuel": "MGO" },
+              "boiler1": { "start": "8525.0",   "end": "8526.5",   "fuel": "MGO" },
+              "boiler2": { "start": "9120.8",   "end": "9120.8",   "fuel": "MGO" }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "voyageEnd": {
+    "completedAt": "2026-01-19T08:30:00.000Z",
+    "engineer": "C. Karras (Chief Engineer)",
+    "notes": "Routine 4-day Bahamas itinerary. Fuel changeover into US ECA executed without issue at 14:30 / 18 Jan. ME LO consumption nominal. Boiler 2 secured entire voyage (in maintenance — see WO #4471).",
+    "lubeOil": {
+      "meCons": "320",
+      "lo13s14s": "85",
+      "usedLo13c": "120"
+    },
+    "totals": {
+      "hfo": 433.04,
+      "mgo": 70.63,
+      "lsfo": 103.96,
+      "freshWaterCons": 1065
+    },
+    "densitiesAtClose": {
+      "HFO": 0.92,
+      "MGO": 0.83,
+      "LSFO": 0.92
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "shipId": "solstice",
+  "voyages": [
+    {
+      "filename": "2026-01-15_MIA-CCY-NAS-MIA.json",
+      "id": 1737000000000,
+      "name": "MIA-CCY-NAS-MIA",
+      "startDate": "2026-01-15",
+      "endDate": "2026-01-19",
+      "ended": true
+    }
+  ]
+}
