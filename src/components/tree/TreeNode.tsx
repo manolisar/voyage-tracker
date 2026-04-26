@@ -9,9 +9,9 @@
 //     ├ Leg 2 …
 //     └ Voyage End (⚑)        — only when voyage.voyageEnd is set
 
-import { memo, useCallback, type MouseEvent } from 'react';
+import { memo, useCallback, useMemo, type MouseEvent } from 'react';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
-import { voyageRouteLabel } from '../../domain/factories';
+import { sortLegsByDate, voyageRouteLabel } from '../../domain/factories';
 import type {
   Leg,
   ReportKind,
@@ -161,6 +161,11 @@ const VoyageChildren = memo(function VoyageChildren({
     select({ filename, kind: 'voyageEnd' });
   }, [select, filename]);
 
+  // Render legs in chronological order. The on-disk array stays in insertion
+  // order; this is purely a display sort so the L1/L2/L3 numbering matches
+  // departure date even when legs were added out of order.
+  const sortedLegs = useMemo(() => sortLegsByDate(voyage.legs), [voyage.legs]);
+
   return (
     <>
       {/* Voyage Detail */}
@@ -176,7 +181,7 @@ const VoyageChildren = memo(function VoyageChildren({
       </button>
 
       {/* Legs */}
-      {voyage.legs?.map((leg, idx) => {
+      {sortedLegs.map((leg, idx) => {
         const key = `${filename}::${leg.id}`;
         const isOpen = expanded.has(key);
         const isLegSelected = selLegId === leg.id && selKind === 'leg';

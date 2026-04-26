@@ -66,6 +66,10 @@ export interface VoyageStoreContextValue {
   updateVoyage: (filename: string, mutator: VoyageMutator) => void;
   createVoyage: (partial: CreateVoyageInput) => Promise<string>;
   addLeg: (filename: string, input: AddLegInput) => number;
+  // Removes a leg from the voyage. Refuses (throws) when the voyage is closed
+  // — the chief must reopen first. Goes through the standard updateVoyage +
+  // autosave path; the on-disk file is rewritten with the leg gone.
+  deleteLeg: (filename: string, legId: number) => void;
   endVoyage: (filename: string, input: EndVoyageInput) => void;
   // Reopens a previously-ended voyage so it can be amended. Clears
   // voyageEnd + endDate; the chief must explicitly re-close (calling

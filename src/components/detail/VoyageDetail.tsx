@@ -4,7 +4,7 @@
 
 import { calcVoyageTotals, type FuelTotals } from '../../domain/calculations';
 import { formatMT } from '../../domain/calculations';
-import { voyageRouteLongLabel } from '../../domain/factories';
+import { sortLegsByDate, voyageRouteLongLabel } from '../../domain/factories';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useToast } from '../../hooks/useToast';
 import { Trash2, Unlock } from '../Icons';
@@ -51,6 +51,7 @@ interface Props {
   onAddLeg?: (filename: string) => void;
   onEndVoyage?: (filename: string) => void;
   onDeleteVoyage?: (filename: string) => void;
+  onDeleteLeg?: (filename: string, legId: number) => void;
 }
 
 export function VoyageDetail({
@@ -61,6 +62,7 @@ export function VoyageDetail({
   onAddLeg,
   onEndVoyage,
   onDeleteVoyage,
+  onDeleteLeg,
 }: Props) {
   const { reopenVoyage } = useVoyageStore();
   const toast = useToast();
@@ -266,8 +268,17 @@ export function VoyageDetail({
             </p>
           ) : (
             <div className="divide-y" style={{ borderColor: 'var(--color-border-subtle)' }}>
-              {voyage.legs.map((leg, i) => (
-                <LegRow key={leg.id} leg={leg} index={i} />
+              {sortLegsByDate(voyage.legs).map((leg, i) => (
+                <LegRow
+                  key={leg.id}
+                  leg={leg}
+                  index={i}
+                  onDelete={
+                    editMode && !ended && onDeleteLeg
+                      ? () => onDeleteLeg(filename, leg.id)
+                      : undefined
+                  }
+                />
               ))}
             </div>
           )}
@@ -320,7 +331,15 @@ function Mini({ label, value, suffix }: MiniProps) {
   );
 }
 
-function LegRow({ leg, index }: { leg: Leg; index: number }) {
+function LegRow({
+  leg,
+  index,
+  onDelete,
+}: {
+  leg: Leg;
+  index: number;
+  onDelete?: () => void;
+}) {
   const dep = leg.departure?.port?.split(',')[0]?.trim() || 'Dep';
   const arr = leg.arrival?.port?.split(',')[0]?.trim() || 'Arr';
   return (
@@ -347,6 +366,18 @@ function LegRow({ leg, index }: { leg: Leg; index: number }) {
         >
           VR
         </span>
+      )}
+      {onDelete && (
+        <button
+          type="button"
+          className="p-1.5 rounded hover:bg-black/5"
+          style={{ color: 'var(--color-error-fg)' }}
+          onClick={onDelete}
+          aria-label={`Delete leg ${index + 1}`}
+          title="Delete this leg"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
       )}
     </div>
   );

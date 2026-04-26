@@ -176,5 +176,23 @@ export function voyageRouteLongLabel(voyage: RouteVoyage): string {
   return `${a} → ${b}`;
 }
 
+// Display order for legs: ascending departure date.
+// Empty/missing dates sink to the bottom so newly-created legs (which have no
+// date yet) don't shuffle the existing chronology. ISO YYYY-MM-DD lexsorts
+// correctly so a string compare is enough.
+// On-disk `voyage.legs` stays in insertion order — `leg.id` is the stable
+// identity. This is purely a render-time sort.
+export function sortLegsByDate(legs: Leg[] | null | undefined): Leg[] {
+  if (!legs?.length) return [];
+  return [...legs].sort((a, b) => {
+    const da = a.departure?.date || '';
+    const db = b.departure?.date || '';
+    if (!da && !db) return 0;
+    if (!da) return 1;
+    if (!db) return -1;
+    return da.localeCompare(db);
+  });
+}
+
 // Exported for tests / explicit factories
 export { PHASE_TYPES, REPORT_TYPES };

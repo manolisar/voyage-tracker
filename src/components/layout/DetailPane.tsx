@@ -32,9 +32,17 @@ interface Props {
   onAddLeg?: (filename: string) => void;
   onEndVoyage?: (filename: string) => void;
   onDeleteVoyage?: (filename: string) => void;
+  onDeleteLeg?: (filename: string, legId: number) => void;
 }
 
-export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoyage }: Props) {
+export function DetailPane({
+  ship,
+  shipClass,
+  onAddLeg,
+  onEndVoyage,
+  onDeleteVoyage,
+  onDeleteLeg,
+}: Props) {
   const { editMode } = useSession();
   const {
     selected, loadedById, loadVoyage, loadingFiles, updateVoyage,
@@ -170,6 +178,7 @@ export function DetailPane({ ship, shipClass, onAddLeg, onEndVoyage, onDeleteVoy
         onAddLeg={onAddLeg}
         onEndVoyage={onEndVoyage}
         onDeleteVoyage={onDeleteVoyage}
+        onDeleteLeg={onDeleteLeg}
       />
     );
   }

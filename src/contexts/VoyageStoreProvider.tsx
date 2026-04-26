@@ -690,6 +690,39 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
     [loadedById, updateVoyage],
   );
 
+  // Remove a leg from the voyage. Goes through updateVoyage so it autosaves
+  // and gets a fresh loggedBy stamp. Refuses on a closed voyage to match
+  // addLeg — the chief must reopen first.
+  const deleteLeg = useCallback(
+    (filename: string, legId: number) => {
+      if (!filename || legId == null) return;
+      const current = draftsRef.current[filename] ?? loadedById[filename];
+      if (current?.voyageEnd) {
+        throw new Error('Voyage is closed — reopen it before deleting a leg.');
+      }
+      updateVoyage(filename, (v) => ({
+        ...v,
+        legs: (v.legs || []).filter((l) => l.id !== legId),
+      }));
+      // Selection cleanup: if we were viewing the deleted leg or one of its
+      // child reports, drop back to the voyage detail.
+      setSelected((sel) => {
+        if (!sel || sel.filename !== filename) return sel;
+        if (sel.legId === legId) return { filename, kind: 'voyage' };
+        return sel;
+      });
+      // Expansion cleanup: drop the deleted leg's expansion key.
+      const legKey = `${filename}::${legId}`;
+      setExpanded((prev) => {
+        if (!prev.has(legKey)) return prev;
+        const next = new Set(prev);
+        next.delete(legKey);
+        return next;
+      });
+    },
+    [loadedById, updateVoyage],
+  );
+
   const endVoyage = useCallback(
     (
       filename: string,
@@ -807,6 +840,7 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       updateVoyage,
       createVoyage,
       addLeg,
+      deleteLeg,
       endVoyage,
       reopenVoyage,
       deleteVoyage,
@@ -846,6 +880,7 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       updateVoyage,
       createVoyage,
       addLeg,
+      deleteLeg,
       endVoyage,
       reopenVoyage,
       deleteVoyage,

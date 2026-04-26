@@ -17,6 +17,7 @@ import { NewVoyageModal } from '../modals/NewVoyageModal';
 import { AddLegModal } from '../modals/AddLegModal';
 import { VoyageEndModal } from '../modals/VoyageEndModal';
 import { DeleteVoyageModal } from '../modals/DeleteVoyageModal';
+import { DeleteLegModal } from '../modals/DeleteLegModal';
 import { StaleFileModal } from '../modals/StaleFileModal';
 import { ImportCountersModal } from '../modals/ImportCountersModal';
 import { HelpModal } from '../modals/HelpModal';
@@ -34,6 +35,7 @@ export function AppShell() {
   const [addLegFor, setAddLegFor] = useState<string | null>(null);
   const [endVoyageFor, setEndVoyageFor] = useState<string | null>(null);
   const [deleteVoyageFor, setDeleteVoyageFor] = useState<string | null>(null);
+  const [deleteLegFor, setDeleteLegFor] = useState<{ filename: string; legId: number } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -143,6 +145,7 @@ export function AppShell() {
               onAddLeg={(filename) => setAddLegFor(filename)}
               onEndVoyage={(filename) => setEndVoyageFor(filename)}
               onDeleteVoyage={(filename) => setDeleteVoyageFor(filename)}
+              onDeleteLeg={(filename, legId) => setDeleteLegFor({ filename, legId })}
             />
           </main>
         </div>
@@ -182,6 +185,14 @@ export function AppShell() {
           <DeleteVoyageModal
             filename={deleteVoyageFor}
             onClose={() => setDeleteVoyageFor(null)}
+          />
+        )}
+
+        {deleteLegFor && (
+          <DeleteLegModal
+            filename={deleteLegFor.filename}
+            legId={deleteLegFor.legId}
+            onClose={() => setDeleteLegFor(null)}
           />
         )}
 

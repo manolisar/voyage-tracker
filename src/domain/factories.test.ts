@@ -8,6 +8,7 @@ import {
   voyageRouteLabel,
   voyageRouteLongLabel,
   inheritedCounter,
+  sortLegsByDate,
 } from './factories';
 import { APP_VERSION, REPORT_TYPES } from './constants';
 import solsticeClassRaw from '../../public/ship-classes/solstice-class.json';
@@ -170,6 +171,56 @@ describe('voyageRouteLabel', () => {
         toPort: { code: 'FLL' },
       }),
     ).toBe('MIA → FLL');
+  });
+});
+
+describe('sortLegsByDate', () => {
+  // Build a fake Leg with just enough shape to satisfy the type. The sort
+  // only reads departure.date, so the rest can be cast through unknown.
+  const leg = (id: number, depDate: string) =>
+    ({ id, departure: { date: depDate }, arrival: {} } as unknown as import('../types/domain').Leg);
+
+  it('returns [] for null/undefined/empty input', () => {
+    expect(sortLegsByDate(null)).toEqual([]);
+    expect(sortLegsByDate(undefined)).toEqual([]);
+    expect(sortLegsByDate([])).toEqual([]);
+  });
+
+  it('sorts ascending by departure date', () => {
+    const out = sortLegsByDate([
+      leg(3, '2026-03-01'),
+      leg(1, '2026-01-01'),
+      leg(2, '2026-02-01'),
+    ]);
+    expect(out.map((l) => l.id)).toEqual([1, 2, 3]);
+  });
+
+  it('leaves an already-sorted list unchanged', () => {
+    const ls = [leg(1, '2026-01-01'), leg(2, '2026-02-01'), leg(3, '2026-03-01')];
+    expect(sortLegsByDate(ls).map((l) => l.id)).toEqual([1, 2, 3]);
+  });
+
+  it('does not mutate the input array', () => {
+    const ls = [leg(3, '2026-03-01'), leg(1, '2026-01-01'), leg(2, '2026-02-01')];
+    const before = ls.map((l) => l.id);
+    sortLegsByDate(ls);
+    expect(ls.map((l) => l.id)).toEqual(before);
+  });
+
+  it('sinks empty-date legs to the bottom', () => {
+    const out = sortLegsByDate([
+      leg(2, ''),
+      leg(1, '2026-01-01'),
+      leg(3, '2026-02-01'),
+    ]);
+    expect(out.map((l) => l.id)).toEqual([1, 3, 2]);
+  });
+
+  it('keeps relative order between two empty-date legs (stable enough for display)', () => {
+    const out = sortLegsByDate([leg(1, ''), leg(2, ''), leg(3, '2026-01-01')]);
+    expect(out[0].id).toBe(3);
+    // Empty-date entries follow; both ordered after the dated leg.
+    expect(out.slice(1).map((l) => l.id).sort()).toEqual([1, 2]);
   });
 });
 
