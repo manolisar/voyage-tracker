@@ -733,6 +733,10 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       // already-ended voyage is a silent no-op. To re-close after edits, the
       // chief reopens first via reopenVoyage().
       const nowDate = endDate || new Date().toISOString().slice(0, 10);
+      // Round IEEE-noise off the persisted totals — the on-screen formatMT
+      // already rounds to 2 decimals, so anything tighter than that on disk
+      // is just garbage tail (e.g. 23.000000000000004 → 23).
+      const round2 = (n: number) => Math.round(n * 100) / 100;
       updateVoyage(filename, (v) => {
         const fuel = calcVoyageTotals(v, shipClass);
         const freshWaterCons = calcVoyageFreshWaterTotal(v);
@@ -751,18 +755,28 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
             notes,
             lubeOil: lubeOil || base.lubeOil,
             totals: {
-              hfo: fuel.hfo,
-              mgo: fuel.mgo,
-              lsfo: fuel.lsfo,
-              freshWaterCons,
+              hfo: round2(fuel.hfo),
+              mgo: round2(fuel.mgo),
+              lsfo: round2(fuel.lsfo),
+              freshWaterCons: round2(freshWaterCons),
             },
             densitiesAtClose: v.densities || base.densitiesAtClose,
           },
         };
       });
       setSelected({ filename, kind: 'voyageEnd' });
+      // 3A: when the user is on the ACTIVE filter (the default), an ended
+      // voyage immediately disappears from the tree. Surface a toast so
+      // they know where to look — keep their filter choice unchanged.
+      if (filter === 'active') {
+        addToast(
+          'Voyage ended. Switch to "Ended" or "All" to view closed voyages.',
+          'info',
+          5000,
+        );
+      }
     },
-    [updateVoyage],
+    [updateVoyage, filter, addToast],
   );
 
   // ── Manual carry-over (phase END → next phase START) ──────────────────

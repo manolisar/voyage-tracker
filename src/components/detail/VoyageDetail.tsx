@@ -19,10 +19,15 @@ const FUEL_COLS: { key: keyof FuelTotals & string; label: FuelKey }[] = [
 function lastReportRob(voyage: Voyage): Record<string, string> {
   // Walk legs in order; pick the latest arrival ROB, falling back to last
   // departure ROB. Used for the "ROB" hint on the fuel summary cards.
+  // Skip ROB objects whose every fuel is empty — defaultReport() seeds
+  // `{ hfo: '', mgo: '', lsfo: '' }`, so without this guard an empty
+  // arrival ROB would mask a populated departure ROB on the same leg.
+  const hasAny = (r: Record<string, string> | undefined): boolean =>
+    !!r && (!!r.hfo || !!r.mgo || !!r.lsfo);
   const reports: Record<string, string>[] = [];
   for (const leg of voyage.legs || []) {
-    if (leg.departure?.rob) reports.push(leg.departure.rob);
-    if (leg.arrival?.rob) reports.push(leg.arrival.rob);
+    if (hasAny(leg.departure?.rob)) reports.push(leg.departure!.rob);
+    if (hasAny(leg.arrival?.rob)) reports.push(leg.arrival!.rob);
   }
   return reports[reports.length - 1] || {};
 }

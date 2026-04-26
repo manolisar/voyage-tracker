@@ -33,3 +33,9 @@ dist-ssr
 
 # One-shot data migration artifacts (see CLAUDE.md §11 Phase 5)
 migration/
+
+# Playwright e2e
+test-results/
+playwright-report/
+playwright/.cache/
+.playwright-mcp/

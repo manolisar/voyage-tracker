@@ -158,7 +158,11 @@ export function VoyageTree() {
         className="shrink-0 px-3 py-2 border-t text-[0.6rem] font-mono flex items-center justify-between"
         style={{ borderColor: 'var(--color-border-subtle)', color: 'var(--color-faint)' }}
       >
-        <span>{visibleVoyages.length} voyage{visibleVoyages.length === 1 ? '' : 's'}</span>
+        <span>
+          {visibleVoyages.length === voyages.length
+            ? `${voyages.length} voyage${voyages.length === 1 ? '' : 's'}`
+            : `${visibleVoyages.length} of ${voyages.length} voyage${voyages.length === 1 ? '' : 's'}`}
+        </span>
         <span>{shipId}/</span>
       </div>
     </div>
