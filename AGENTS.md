@@ -34,6 +34,12 @@ All 5 ships share identical engine/boiler plant. Adding a new ship of the same c
 
 Default densities: HFO 0.92, MGO 0.83, LSFO 0.92 (editable per-voyage). Lub-oil is recorded **only** at End Voyage, never in departure/arrival reports. All of this is data-driven via [solstice-class.json](public/ship-classes/solstice-class.json) — adding a new ship class = drop a new JSON file there.
 
+## Main page navigation
+
+The left pane tree is intentionally shallow: Voyage → Voyage Detail, Leg 1/2/3, and Voyage End. Departure, Arrival, and **Nav Report** live as tabs in the right pane after a leg is selected. A leg click opens the first incomplete tab in order: Departure → Arrival → Nav Report, then falls back to Departure when all are complete.
+
+Status pills in the sticky leg header flag missing fields, missing fuel ROB, and negative equipment counter deltas. The persisted JSON property is still `voyageReport`; only the user-facing label is **Nav Report**.
+
 ## Things this app does NOT have
 
 If older docs, prior conversations, or training data suggest otherwise — they're stale. The architecture pivoted to local-file storage; everything below was removed.
@@ -60,7 +66,7 @@ src/
 
 ```bash
 npm run dev         # vite dev server (Chromium only — File System Access API)
-npm test            # vitest run, ~120 cases, ~150ms
+npm test            # vitest run, ~150 cases, ~150ms
 npm run typecheck   # tsc --noEmit on src + node configs
 npm run build       # typecheck && vite build
 npm run lint        # eslint .
@@ -75,4 +81,4 @@ npm run lint        # eslint .
 
 ---
 
-*Last updated: 2026-04-25. AGENTS.md is a pointer; behavioural decisions live in CLAUDE.md.*
+*Last updated: 2026-04-29. AGENTS.md is a pointer; behavioural decisions live in CLAUDE.md.*

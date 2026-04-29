@@ -2,19 +2,16 @@
 // Hierarchy:
 //   Voyage (anchor) ▸
 //     ├ Voyage Detail (▤)
-//     ├ Leg 1 (⇆) ▸
-//     │   ├ Departure (↗)
-//     │   ├ Arrival (↘)
-//     │   └ Voyage Report (⎈)  — only on legs that have one
+//     ├ Leg 1 (⇆)
 //     ├ Leg 2 …
 //     └ Voyage End (⚑)        — only when voyage.voyageEnd is set
 
 import { memo, useCallback, useMemo, type MouseEvent } from 'react';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
+import { getDefaultLegReportKind, isLegReportKind } from '../../domain/legReportNavigation';
 import { sortLegsByDate, voyageRouteLabel } from '../../domain/factories';
 import type {
   Leg,
-  ReportKind,
   Selection,
   Voyage,
   VoyageManifestEntry,
@@ -101,13 +98,11 @@ export function TreeNode({ entry }: TreeNodeProps) {
             <VoyageChildren
               filename={filename}
               voyage={v}
-              expanded={expanded}
               isDetailSelected={isVoyageSelected}
               isEndSelected={isEndSelected}
               selLegId={selLegId}
               selKind={selKind}
               select={select}
-              toggleExpand={toggleExpand}
             />
           )}
         </div>
@@ -119,13 +114,11 @@ export function TreeNode({ entry }: TreeNodeProps) {
 interface VoyageChildrenProps {
   filename: string;
   voyage: Voyage;
-  expanded: Set<string>;
   isDetailSelected: boolean;
   isEndSelected: boolean;
   selLegId: number | null;
   selKind: Selection['kind'] | null;
   select: SelectFn;
-  toggleExpand: ToggleFn;
 }
 
 function voyageChildrenEqual(prev: VoyageChildrenProps, next: VoyageChildrenProps): boolean {
@@ -136,23 +129,14 @@ function voyageChildrenEqual(prev: VoyageChildrenProps, next: VoyageChildrenProp
   if (prev.selLegId !== next.selLegId) return false;
   if (prev.selKind !== next.selKind) return false;
   if (prev.select !== next.select) return false;
-  if (prev.toggleExpand !== next.toggleExpand) return false;
-  // `expanded` is a Set whose identity changes on every expand anywhere in the
-  // tree. Only treat it as a change if a key relevant to THIS voyage's legs
-  // differs — that way unrelated expansions don't re-render this subtree.
-  const legs = next.voyage?.legs || [];
-  for (const leg of legs) {
-    const key = `${next.filename}::${leg.id}`;
-    if (prev.expanded.has(key) !== next.expanded.has(key)) return false;
-  }
   return true;
 }
 
 const VoyageChildren = memo(function VoyageChildren({
-  filename, voyage, expanded,
+  filename, voyage,
   isDetailSelected, isEndSelected,
   selLegId, selKind,
-  select, toggleExpand,
+  select,
 }: VoyageChildrenProps) {
   const onSelectDetail = useCallback(() => {
     select({ filename, kind: 'voyage' });
@@ -182,21 +166,15 @@ const VoyageChildren = memo(function VoyageChildren({
 
       {/* Legs */}
       {sortedLegs.map((leg, idx) => {
-        const key = `${filename}::${leg.id}`;
-        const isOpen = expanded.has(key);
-        const isLegSelected = selLegId === leg.id && selKind === 'leg';
-        const selectedReportKind = selLegId === leg.id ? selKind : null;
+        const isLegSelected = selLegId === leg.id && (selKind === 'leg' || isLegReportKind(selKind));
         return (
           <LegNode
             key={leg.id}
             filename={filename}
             leg={leg}
             index={idx}
-            isOpen={isOpen}
             isLegSelected={isLegSelected}
-            selectedReportKind={selectedReportKind}
             select={select}
-            toggleExpand={toggleExpand}
           />
         );
       })}
@@ -221,112 +199,36 @@ interface LegNodeProps {
   filename: string;
   leg: Leg;
   index: number;
-  isOpen: boolean;
   isLegSelected: boolean;
-  selectedReportKind: Selection['kind'] | null;
   select: SelectFn;
-  toggleExpand: ToggleFn;
 }
 
 const LegNode = memo(function LegNode({
   filename, leg, index,
-  isOpen, isLegSelected, selectedReportKind,
-  select, toggleExpand,
+  isLegSelected,
+  select,
 }: LegNodeProps) {
-  const legKey = `${filename}::${leg.id}`;
   const depPort = leg.departure?.port?.split(',')[0]?.trim() || 'Dep';
   const arrPort = leg.arrival?.port?.split(',')[0]?.trim() || 'Arr';
 
-  const onToggle = useCallback(
-    (e: MouseEvent<HTMLSpanElement>) => {
-      e.stopPropagation();
-      toggleExpand(legKey);
-    },
-    [toggleExpand, legKey],
-  );
-
   const onRowClick = useCallback(() => {
-    select({ filename, kind: 'leg', legId: leg.id });
-    if (!isOpen) toggleExpand(legKey);
-  }, [select, filename, leg.id, isOpen, toggleExpand, legKey]);
+    select({ filename, kind: getDefaultLegReportKind(leg), legId: leg.id });
+  }, [select, filename, leg]);
 
   return (
-    <div role="treeitem" aria-expanded={isOpen}>
+    <div role="treeitem">
       <button
         type="button"
         className={`tree-node ${isLegSelected ? 'selected' : ''}`}
         onClick={onRowClick}
       >
-        <span onClick={onToggle} role="button" aria-label={isOpen ? 'Collapse' : 'Expand'}>
-          {chev(isOpen)}
-        </span>
+        {spacer()}
         <span className="tree-icon">⇆</span>
         <span className="flex-1 truncate">
           <span className="font-mono text-[0.7rem]" style={LEG_NUM_STYLE}>L{index + 1}</span>{' '}
           {depPort} → {arrPort}
         </span>
       </button>
-
-      {isOpen && (
-        <div className="ml-4 pl-2 border-l" style={BORDER_SUBTLE_STYLE}>
-          <ReportChild
-            filename={filename}
-            legId={leg.id}
-            kind="departure"
-            label="Departure"
-            icon="↗"
-            isSelected={selectedReportKind === 'departure'}
-            select={select}
-          />
-          <ReportChild
-            filename={filename}
-            legId={leg.id}
-            kind="arrival"
-            label="Arrival"
-            icon="↘"
-            isSelected={selectedReportKind === 'arrival'}
-            select={select}
-          />
-          <ReportChild
-            filename={filename}
-            legId={leg.id}
-            kind="voyageReport"
-            label="Voyage Report"
-            icon="⎈"
-            isSelected={selectedReportKind === 'voyageReport'}
-            select={select}
-          />
-        </div>
-      )}
     </div>
-  );
-});
-
-interface ReportChildProps {
-  filename: string;
-  legId: number;
-  kind: ReportKind | 'voyageReport';
-  label: string;
-  icon: string;
-  isSelected: boolean;
-  select: SelectFn;
-}
-
-const ReportChild = memo(function ReportChild({
-  filename, legId, kind, label, icon, isSelected, select,
-}: ReportChildProps) {
-  const onClick = useCallback(() => {
-    select({ filename, kind, legId });
-  }, [select, filename, kind, legId]);
-  return (
-    <button
-      type="button"
-      className={`tree-node ${isSelected ? 'selected' : ''}`}
-      onClick={onClick}
-    >
-      {spacer()}
-      <span className="tree-icon">{icon}</span>
-      <span className="truncate">{label}</span>
-    </button>
   );
 });

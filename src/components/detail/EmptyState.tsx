@@ -16,7 +16,7 @@ export function EmptyState({ ship }: Props) {
       <div className="section-kicker">Voyage tree ready</div>
       <h2>Pick a voyage to begin</h2>
       <p>
-        Select a voyage, leg, departure report, arrival report, or voyage report from the tree.
+        Select a voyage or leg from the tree.
         {ship ? ' Current ship: ' + ship.displayName + ' (' + ship.code + ').' : ''}
       </p>
       <div className="empty-state-hint">

@@ -7,52 +7,7 @@ import { useSession } from '../../hooks/useSession';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { TreeToolbar } from './TreeToolbar';
 import { TreeNode } from './TreeNode';
-import type { Selection, Voyage, VoyageManifestEntry } from '../../types/domain';
-
-interface FlatRow {
-  sel: Selection;
-  expandKey: string | null;
-  canExpand: boolean;
-  parent: Selection | null;
-}
-
-// Stable key for a selection object — used to locate the current row in the
-// flat list when stepping with arrow keys.
-function selKey(sel: Selection | null | undefined): string {
-  if (!sel) return '';
-  return `${sel.filename}|${sel.kind}|${sel.legId || ''}`;
-}
-
-// Flatten the currently-visible tree into an ordered list of rows that the
-// arrow-key handler can step through. Children are only emitted when their
-// parent is expanded (and, for voyages, when the full voyage has loaded).
-function flattenRows(
-  visibleVoyages: VoyageManifestEntry[],
-  expanded: Set<string>,
-  loadedById: Record<string, Voyage>,
-): FlatRow[] {
-  const rows: FlatRow[] = [];
-  for (const v of visibleVoyages) {
-    const voyageSel: Selection = { filename: v.filename, kind: 'voyage' };
-    rows.push({ sel: voyageSel, expandKey: v.filename, canExpand: true, parent: null });
-    if (!expanded.has(v.filename)) continue;
-    const full = loadedById[v.filename];
-    if (!full) continue;
-    for (const leg of full.legs || []) {
-      const legKey = `${v.filename}::${leg.id}`;
-      const legSel: Selection = { filename: v.filename, kind: 'leg', legId: leg.id };
-      rows.push({ sel: legSel, expandKey: legKey, canExpand: true, parent: voyageSel });
-      if (!expanded.has(legKey)) continue;
-      rows.push({ sel: { filename: v.filename, kind: 'departure', legId: leg.id }, expandKey: null, canExpand: false, parent: legSel });
-      rows.push({ sel: { filename: v.filename, kind: 'arrival', legId: leg.id }, expandKey: null, canExpand: false, parent: legSel });
-      rows.push({ sel: { filename: v.filename, kind: 'voyageReport', legId: leg.id }, expandKey: null, canExpand: false, parent: legSel });
-    }
-    if (full.voyageEnd) {
-      rows.push({ sel: { filename: v.filename, kind: 'voyageEnd' }, expandKey: null, canExpand: false, parent: voyageSel });
-    }
-  }
-  return rows;
-}
+import { flattenVoyageTreeRows, selectionKey } from './voyageTreeRows';
 
 export function VoyageTree() {
   const { shipId } = useSession();
@@ -70,10 +25,10 @@ export function VoyageTree() {
       if (key !== 'ArrowUp' && key !== 'ArrowDown' && key !== 'ArrowLeft'
           && key !== 'ArrowRight' && key !== 'Home' && key !== 'End') return;
 
-      const rows = flattenRows(visibleVoyages, expanded, loadedById);
+      const rows = flattenVoyageTreeRows(visibleVoyages, expanded, loadedById);
       if (!rows.length) return;
-      const currentKey = selKey(selected);
-      let idx = rows.findIndex((r) => selKey(r.sel) === currentKey);
+      const currentKey = selectionKey(selected);
+      let idx = rows.findIndex((r) => selectionKey(r.sel) === currentKey);
       if (idx < 0) idx = 0;
       const row = rows[idx];
 

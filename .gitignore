@@ -30,6 +30,7 @@ dist-ssr
 
 # Claude Code per-project state (worktrees, local settings)
 .claude/
+.superpowers/
 
 # One-shot data migration artifacts (see CLAUDE.md §11 Phase 5)
 migration/

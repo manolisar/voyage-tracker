@@ -90,7 +90,7 @@ export function HelpModal({ onClose }: Props) {
             <p>Convention (not enforced — anyone can edit any field):</p>
             <ul className="list-disc pl-5 space-y-1">
               <li><strong>2nd Engineer (ECR)</strong> — creates voyages, Departure and Arrival fuel data.</li>
-              <li><strong>Bridge Officer of Watch</strong> — per-leg Voyage Report (times, distance, speed).</li>
+              <li><strong>Bridge Officer of Watch</strong> — per-leg Nav Report (times, distance, speed).</li>
               <li><strong>Chief Engineer</strong> — amends anything, closes voyages (End Voyage + lub-oil).</li>
             </ul>
             <p>

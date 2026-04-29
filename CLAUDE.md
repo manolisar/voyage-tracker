@@ -104,7 +104,7 @@ A one-click toggle in the top bar flips between **View Only** (default on open) 
 |-------------------------|--------------|----------------------------------------------------------|
 | Chief Engineer          | `chief`      | Amends anything, closes voyages (End Voyage + lub-oil).  |
 | 2nd Engineer (ECR)      | `second`     | Creates voyages, writes Departure / Arrival fuel data.   |
-| Bridge Officer of Watch | `bridge`     | Writes per-leg Voyage Report (times, distance, speed).   |
+| Bridge Officer of Watch | `bridge`     | Writes per-leg Nav Report (times, distance, speed).      |
 | Other                   | `other`      | Fallback for cadets/relief crew.                         |
 
 Stored role values are the lowercase enum from [`src/domain/constants.js`](src/domain/constants.js) (`EDITOR_ROLES`). The capitalized human labels (`EDITOR_ROLE_LABELS`) are only for display — the TopBar renders the first word of the label (e.g. "Chief") next to the user's name.
@@ -143,26 +143,26 @@ TopBar:  [☰] Voyage Tracker — Celebrity Solstice    [● Edit Mode | View On
 │  [Active][Ended][All]    │   Selected node renders here:                  │
 │                          │   • VoyageDetail (cruise card + densities      │
 │  ▾ MIA-NAS-MIA           │     + summary + Legs list)                     │
-│    📋 Voyage Detail      │   • ReportDetail (Departure/Arrival form)      │
-│    ▾ Leg 1               │   • VoyageReportDetail (End Voyage summary     │
-│      📤 Departure        │     incl. lub-oil)                             │
-│      📥 Arrival          │                                                │
-│    ▾ Leg 2               │                                                │
-│      📤 Departure        │                                                │
-│      📥 Arrival          │                                                │
-│    📊 Voyage Report      │                                                │
+│    📋 Voyage Detail      │   • Leg report workspace with sticky header    │
+│    ⇆ Leg 1               │     + tabs: Departure / Arrival / Nav Report  │
+│    ⇆ Leg 2               │   • VoyageEndDetail (closeout incl. lub-oil)  │
+│    ⚑ Voyage End          │                                                │
 └──────────────────────────┴────────────────────────────────────────────────┘
 ```
 
 **Tree hierarchy:**
 - Voyage
   - 📋 Voyage Detail (always present)
-  - Leg 1, 2, 3, …
-    - 📤 Departure Report
-    - 📥 Arrival Report
-  - 📊 Voyage Report (only after End Voyage)
+  - Leg 1, 2, 3, … (selecting a leg opens the right-pane report tabs)
+  - ⚑ Voyage End (only after End Voyage)
 
-**No `LegDetail` node** — clicking a leg expands it; the actual detail nodes are Departure/Arrival underneath.
+**Leg report tabs:** Departure, Arrival, and Nav Report are not sidebar tree
+children. Clicking a leg routes to the first incomplete report tab in this
+order: Departure → Arrival → Nav Report, falling back to Departure when all are
+complete. The sticky leg header shows report status pills; missing fuel ROB and
+negative equipment counter deltas keep the relevant report in an attention
+state. The internal data property remains `voyageReport`; the visible UI label
+is **Nav Report**.
 
 **Independent pane scrolling:** `html, body { overflow: hidden }`, root flex with `min-h-0` on grid children. Sidebar scrolls independently of detail; detail scrolls independently of sidebar.
 

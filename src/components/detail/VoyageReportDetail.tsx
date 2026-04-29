@@ -1,4 +1,4 @@
-// VoyageReportDetail — read-only Voyage Report.
+// VoyageReportDetail — read-only Nav Report.
 // Renders the exact same <VoyageReportSection> used in edit mode but with
 // `readOnly`, guaranteeing pixel-level parity between view and edit.
 
@@ -14,7 +14,7 @@ export function VoyageReportDetail({ leg }: Props) {
   if (!vr) {
     return (
       <div className="max-w-3xl mx-auto p-6 text-center">
-        <p style={{ color: 'var(--color-dim)' }}>No voyage report on this leg.</p>
+        <p style={{ color: 'var(--color-dim)' }}>No nav report on this leg.</p>
       </div>
     );
   }

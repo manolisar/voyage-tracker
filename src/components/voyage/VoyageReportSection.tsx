@@ -201,7 +201,7 @@ export function VoyageReportSection({
             <Compass className="w-4 h-4" />
           </span>
           <div>
-            <span className="cat-label" style={{ padding: 0, letterSpacing: '1.5px' }}>Voyage Report</span>
+            <span className="cat-label" style={{ padding: 0, letterSpacing: '1.5px' }}>Nav Report</span>
             {collapsed && (
               <p className="text-[0.6rem] font-mono mt-0.5" style={{ color: 'var(--color-dim)' }}>
                 {depPort || 'From'} {'→'} {arrPort || 'To'}
@@ -223,8 +223,8 @@ export function VoyageReportSection({
               }}
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: 'var(--color-faint)' }}
-              title="Remove Voyage Report"
-              aria-label="Remove Voyage Report"
+              title="Remove Nav Report"
+              aria-label="Remove Nav Report"
             >
               <X className="w-4 h-4" />
             </button>

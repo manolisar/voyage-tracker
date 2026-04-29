@@ -75,7 +75,7 @@ export function DeleteLegModal({ filename, legId, onClose }: Props) {
         <div className="p-5 space-y-4">
           <p className="text-[0.82rem]" style={{ color: 'var(--color-text)' }}>
             This will permanently remove the departure report, arrival report
-            {hasVR ? ', and voyage report ' : ' '}
+            {hasVR ? ', and nav report ' : ' '}
             for this leg. There is no undo.
           </p>
 

@@ -5,14 +5,22 @@
 // Selection shapes:
 //   null                                                  → EmptyState
 //   { filename, kind: 'voyage' }                          → VoyageDetail
-//   { filename, kind: 'leg', legId }                      → VoyageDetail (leg has no own page)
-//   { filename, kind: 'departure'|'arrival', legId }      → ReportDetail / ReportForm
-//   { filename, kind: 'voyageReport', legId }             → VoyageReportDetail / VoyageReportSection
+//   { filename, kind: 'leg', legId }                      → first incomplete leg report tab
+//   { filename, kind: 'departure'|'arrival', legId }      → leg report tabs + ReportDetail / ReportForm
+//   { filename, kind: 'voyageReport', legId }             → leg report tabs + VoyageReportDetail / VoyageReportSection
 //   { filename, kind: 'voyageEnd' }                       → VoyageEndDetail
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, type ReactNode } from 'react';
 import { useSession } from '../../hooks/useSession';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
+import {
+  LEG_REPORT_KINDS,
+  getDefaultLegReportKind,
+  getLegReportCompletion,
+  isLegReportKind,
+  legReportLabel,
+  type LegReportKind,
+} from '../../domain/legReportNavigation';
 import { defaultDensities } from '../../domain/shipClass';
 import { defaultVoyageReport, inheritedCounter } from '../../domain/factories';
 import { EmptyState } from '../detail/EmptyState';
@@ -24,7 +32,7 @@ import { ReportForm } from '../voyage/ReportForm';
 import { VoyageReportSection } from '../voyage/VoyageReportSection';
 import { FloatingCarryOverButton } from '../ui/FloatingCarryOverButton';
 import { ManualCarryOverModal } from '../modals/ManualCarryOverModal';
-import type { Report, ReportKind, Ship, ShipClass, Voyage } from '../../types/domain';
+import type { Leg, Report, ReportKind, Ship, ShipClass, Voyage } from '../../types/domain';
 
 interface Props {
   ship: Ship | null | undefined;
@@ -46,7 +54,7 @@ export function DetailPane({
   const { editMode } = useSession();
   const {
     selected, loadedById, loadVoyage, loadingFiles, updateVoyage,
-    trackPhaseEnd,
+    trackPhaseEnd, select,
   } = useVoyageStore();
 
   const [carryOverOpen, setCarryOverOpen] = useState(false);
@@ -141,6 +149,16 @@ export function DetailPane({
     onVoyageReportChange(voyageForEffect.filename, legForEffect.id, defaultVoyageReport());
   }, [needsVRSeed, voyageForEffect?.filename, legForEffect, onVoyageReportChange]);
 
+  const needsLegDefaultSelection = selected?.kind === 'leg' && !!legForEffect;
+  useEffect(() => {
+    if (!needsLegDefaultSelection || !selected?.filename || !legForEffect) return;
+    select({
+      filename: selected.filename,
+      kind: getDefaultLegReportKind(legForEffect),
+      legId: legForEffect.id,
+    });
+  }, [needsLegDefaultSelection, selected?.filename, legForEffect, select]);
+
   if (!selected) return <EmptyState ship={ship} />;
 
   const voyage = loadedById[selected.filename];
@@ -168,7 +186,7 @@ export function DetailPane({
   const isLocked = !!voyage.voyageEnd;
   const canEdit = editMode && !isLocked;
 
-  if (selected.kind === 'voyage' || selected.kind === 'leg') {
+  if (selected.kind === 'voyage') {
     return (
       <VoyageDetail
         voyage={voyage}
@@ -197,26 +215,41 @@ export function DetailPane({
   }
 
   const densities = voyage.densities || defaultDensities(shipClass);
+  const activeReportKind: LegReportKind =
+    selected.kind === 'leg'
+      ? getDefaultLegReportKind(leg)
+      : isLegReportKind(selected.kind)
+        ? selected.kind
+        : 'departure';
 
-  if (selected.kind === 'departure' || selected.kind === 'arrival') {
+  const filename = voyage.filename ?? '';
+  const selectLegReport = (kind: LegReportKind) => {
+    select({ filename, kind, legId: leg.id });
+  };
+
+  if (activeReportKind === 'departure' || activeReportKind === 'arrival') {
     if (canEdit) {
-      const report = leg[selected.kind];
+      const report = leg[activeReportKind];
       if (!report) {
         return (
           <div className="max-w-3xl mx-auto p-6 text-center" style={{ color: 'var(--color-dim)' }}>
-            No {selected.kind} report on this leg.
+            No {activeReportKind} report on this leg.
           </div>
         );
       }
-      const filename = voyage.filename ?? '';
       return (
-        <div className="max-w-5xl mx-auto">
+        <LegReportTabs
+          voyage={voyage}
+          leg={leg}
+          activeKind={activeReportKind}
+          onSelect={selectLegReport}
+        >
           <ReportForm
             report={report}
             shipClass={shipClass}
             densities={densities}
             onChange={(newReport: Report) =>
-              onReportChange(filename, leg.id, selected.kind as ReportKind, newReport)
+              onReportChange(filename, leg.id, activeReportKind as ReportKind, newReport)
             }
           />
           <FloatingCarryOverButton onClick={() => setCarryOverOpen(true)} />
@@ -226,28 +259,39 @@ export function DetailPane({
               onClose={() => setCarryOverOpen(false)}
             />
           )}
-        </div>
+        </LegReportTabs>
       );
     }
     return (
-      <ReportDetail
+      <LegReportTabs
         voyage={voyage}
         leg={leg}
-        kind={selected.kind}
-        shipClass={shipClass}
-      />
+        activeKind={activeReportKind}
+        onSelect={selectLegReport}
+      >
+        <ReportDetail
+          voyage={voyage}
+          leg={leg}
+          kind={activeReportKind}
+          shipClass={shipClass}
+        />
+      </LegReportTabs>
     );
   }
 
-  if (selected.kind === 'voyageReport') {
+  if (activeReportKind === 'voyageReport') {
     // Legacy legs (pre-v7 imports) may have voyageReport: null — the effect
     // above seeds one asynchronously. Until that settles we render against a
     // throwaway default so the form has something to bind to.
     const vr = leg.voyageReport || defaultVoyageReport();
     if (canEdit) {
-      const filename = voyage.filename ?? '';
       return (
-        <div className="max-w-5xl mx-auto">
+        <LegReportTabs
+          voyage={voyage}
+          leg={leg}
+          activeKind={activeReportKind}
+          onSelect={selectLegReport}
+        >
           <VoyageReportSection
             voyageReport={vr}
             depPort={leg.departure?.port}
@@ -259,11 +303,92 @@ export function DetailPane({
             }
             onDelete={null}
           />
-        </div>
+        </LegReportTabs>
       );
     }
-    return <VoyageReportDetail leg={{ ...leg, voyageReport: vr }} />;
+    return (
+      <LegReportTabs
+        voyage={voyage}
+        leg={leg}
+        activeKind={activeReportKind}
+        onSelect={selectLegReport}
+      >
+        <VoyageReportDetail leg={{ ...leg, voyageReport: vr }} />
+      </LegReportTabs>
+    );
   }
 
   return <EmptyState ship={ship} />;
+}
+
+interface LegReportTabsProps {
+  voyage: Voyage;
+  leg: Leg;
+  activeKind: LegReportKind;
+  onSelect: (kind: LegReportKind) => void;
+  children: ReactNode;
+}
+
+function LegReportTabs({ voyage, leg, activeKind, onSelect, children }: LegReportTabsProps) {
+  const legIndex = (voyage.legs || []).findIndex((l) => l.id === leg.id);
+  const depPort = leg.departure?.port?.split(',')[0]?.trim() || 'Dep';
+  const arrPort = leg.arrival?.port?.split(',')[0]?.trim() || 'Arr';
+
+  return (
+    <div className="max-w-5xl mx-auto">
+      <div
+        className="glass-card rounded-xl overflow-hidden mb-4"
+        style={{ position: 'sticky', top: 0, zIndex: 5 }}
+      >
+        <div className="px-5 py-3.5">
+          <div className="flex items-start gap-3 flex-wrap">
+            <div>
+              <h2 className="text-[0.95rem] font-extrabold" style={{ color: 'var(--color-text)' }}>
+                Leg {legIndex >= 0 ? legIndex + 1 : leg.id} · {depPort} → {arrPort}
+              </h2>
+              <p className="text-[0.65rem] font-mono mt-0.5" style={{ color: 'var(--color-dim)' }}>
+                {leg.departure?.date || 'No departure date'} {'·'} {leg.arrival?.date || 'No arrival date'}
+              </p>
+            </div>
+            <div className="flex-1" />
+            <div className="flex gap-1.5 flex-wrap justify-end">
+              {LEG_REPORT_KINDS.map((kind) => {
+                const status = getLegReportCompletion(leg, kind);
+                return (
+                  <span
+                    key={kind}
+                    className="badge"
+                    style={{
+                      background: status.complete ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.14)',
+                      color: status.complete ? 'var(--color-mgo)' : 'var(--color-warn-fg)',
+                    }}
+                  >
+                    {legReportLabel(kind)} {status.complete ? 'Complete' : status.label}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        <div className="px-5 pb-3 flex gap-2 overflow-x-auto" role="tablist" aria-label="Leg reports">
+          {LEG_REPORT_KINDS.map((kind) => {
+            const active = kind === activeKind;
+            return (
+              <button
+                key={kind}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                className={active ? 'btn-primary px-3 py-1.5 rounded-lg text-xs' : 'btn-flat px-3 py-1.5 rounded-lg text-xs'}
+                onClick={() => onSelect(kind)}
+              >
+                {legReportLabel(kind)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
 }
