@@ -114,9 +114,9 @@ export function VoyageEndModal({ filename, shipClass, onClose }: Props) {
                   <div className="fc-type"><span className="fc-dot" />LSFO</div>
                   <div className="fc-big">{formatMT(totals.lsfo)}</div>
                 </div>
-                <div className="fuel-col">
-                  <div className="fc-type" style={{ color: 'var(--color-dim)' }}>Σ Total</div>
-                  <div className="fc-big" style={{ color: 'var(--color-text)' }}>{formatMT(totalFuel)}</div>
+                <div className="fuel-col fuel-col-sigma">
+                  <div className="fc-type">Σ Total</div>
+                  <div className="fc-big">{formatMT(totalFuel)}</div>
                 </div>
               </div>
             </div>

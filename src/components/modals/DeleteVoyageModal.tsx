@@ -116,7 +116,7 @@ export function DeleteVoyageModal({ filename, onClose }: Props) {
             </button>
             <button
               type="button"
-              className="btn-warning px-4 py-2 rounded-lg text-sm"
+              className="btn-danger px-4 py-2 rounded-lg text-sm"
               onClick={handleConfirm}
               disabled={busy}
             >

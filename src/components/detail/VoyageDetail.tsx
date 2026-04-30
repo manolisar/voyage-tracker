@@ -366,7 +366,7 @@ function LegRow({
       {leg.voyageReport && (
         <span
           className="text-[0.55rem] font-bold tracking-wider px-1.5 py-0.5 rounded"
-          style={{ background: 'rgba(2,132,199,0.10)', color: 'var(--color-water)' }}
+          style={{ background: 'rgba(3,105,161,0.18)', color: '#0369A1' }}
           title="Has nav report"
         >
           VR

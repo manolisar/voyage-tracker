@@ -391,7 +391,7 @@ function DerivedField({ label, value }: { label: string; value: string }) {
         {label}
         <span
           className="text-[0.5rem] font-bold tracking-wider uppercase px-1 py-px rounded"
-          style={{ background: 'rgba(2,132,199,0.10)', color: 'var(--color-water)' }}
+          style={{ background: 'rgba(3,105,161,0.18)', color: '#0369A1' }}
           title="Derived from timestamps"
         >
           auto

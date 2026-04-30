@@ -94,7 +94,11 @@
   --color-surface2: #F3F5F9;
   --color-text: #1A2233;
   --color-dim: #6B7B8F;
-  --color-faint: #B0BAC6;
+  /* Bumped from #B0BAC6 (~2.5:1 — failed WCAG AA on small text) to slate-500
+     so file paths, hints, and other secondary text clear 4.5:1 on the light
+     bg. Visual hierarchy with --color-dim flattens slightly; legibility
+     gain is the bigger win. */
+  --color-faint: #64748B;
   --color-border-subtle: #E5E9F0;
 
   /* state tokens */
@@ -116,7 +120,10 @@
   --color-surface2: rgba(30,41,59,0.5);
   --color-text: #e2e8f0;
   --color-dim: #94a3b8;
-  --color-faint: #64748b;
+  /* Bumped from #64748b (~4.0:1 on dark bg) to slate-400 so secondary text
+     stays legible. Aligns with --color-dim in dark mode but text remains
+     clearly brighter; matches the legibility/hierarchy trade-off in light. */
+  --color-faint: #94A3B8;
   --color-border-subtle: rgba(255,255,255,0.10);
 
   --color-error-bg: rgba(248,113,113,0.12);
@@ -749,11 +756,15 @@ tr.fuel-row-lsfo .eq-mt:not(.zero) { color: var(--color-lsfo); }
 .report-head { background: var(--color-surface2); border-bottom: 1px solid var(--color-border-subtle); }
 .dark .report-head { background: rgba(30, 41, 59, 0.4); border-bottom-color: rgba(255, 255, 255, 0.06); }
 
-/* Voyage Report (Bridge nav) — 3-column grid + helpers */
-.cat-card.nav { background: var(--color-water-light); border: 1px solid var(--color-water-border); }
-.cat-card.nav::before { background: var(--color-ocean-500); }
+/* Voyage Report (Bridge nav) — 3-column grid + helpers.
+   Follows the same stratification motif as .cat-card.water: 0.04 rgba tint
+   on the card body, ::after for the 8px top bar (the previous ::before had
+   no positioning rule so no top bar rendered at all), and the standard
+   .cat-label opaque rail above the body. */
+.cat-card.nav { background: rgba(2, 132, 199, 0.04); }
+.cat-card.nav::after { background: var(--color-water-band); }
 .cat-card.nav .cat-label { color: var(--color-water); }
-.dark .cat-card.nav { background: rgba(2, 132, 199, 0.08); border-color: rgba(2, 132, 199, 0.2); }
+.dark .cat-card.nav { background: rgba(56, 189, 248, 0.05); }
 .dark .cat-card.nav .cat-label { color: var(--color-water-band); }
 
 .vr-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; }
