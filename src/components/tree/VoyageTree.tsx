@@ -7,7 +7,7 @@ import { useSession } from '../../hooks/useSession';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { TreeToolbar } from './TreeToolbar';
 import { TreeNode } from './TreeNode';
-import { flattenVoyageTreeRows, selectionKey } from './voyageTreeRows';
+import { flattenVoyageTreeRows, selectionKey, treeitemId } from './voyageTreeRows';
 
 export function VoyageTree() {
   const { shipId } = useSession();
@@ -74,6 +74,7 @@ export function VoyageTree() {
         role="tree"
         aria-label="Voyages"
         tabIndex={0}
+        aria-activedescendant={selected ? treeitemId(selected) : undefined}
         onKeyDown={onKeyDown}
       >
         {showError && (

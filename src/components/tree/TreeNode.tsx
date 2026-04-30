@@ -6,10 +6,11 @@
 //     ├ Leg 2 …
 //     └ Voyage End (⚑)        — only when voyage.voyageEnd is set
 
-import { memo, useCallback, useMemo, type MouseEvent } from 'react';
+import { memo, useCallback, useMemo, type KeyboardEvent, type MouseEvent } from 'react';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { getDefaultLegReportKind, isLegReportKind } from '../../domain/legReportNavigation';
 import { sortLegsByDate, voyageRouteLabel } from '../../domain/factories';
+import { treeitemId } from './voyageTreeRows';
 import type {
   Leg,
   Selection,
@@ -25,11 +26,27 @@ const VOYAGE_DETAIL_SELECTED_STYLE = { background: 'rgba(6,182,212,0.10)' };
 const VOYAGE_DETAIL_UNSELECTED_STYLE = { background: 'transparent' };
 
 function chev(open: boolean) {
-  return <span className="tree-chev">{open ? '▾' : '▸'}</span>;
+  return <span className="tree-chev" aria-hidden="true">{open ? '▾' : '▸'}</span>;
 }
 
 function spacer() {
-  return <span className="tree-chev" />;
+  return <span className="tree-chev" aria-hidden="true" />;
+}
+
+// Treeitem rows are <div role="treeitem">, not <button>, so the chevron can
+// live inside without nesting interactive elements (audit C7). Enter/Space
+// activate selection — Tab leaves the tree, arrow keys navigate (handled by
+// the parent VoyageTree). Roving tabindex: only the selected row is in the
+// tab order so keyboard users escape the tree in one keypress.
+function activateOnEnterOrSpace(
+  e: KeyboardEvent<HTMLDivElement>,
+  activate: () => void,
+): void {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    e.stopPropagation();
+    activate();
+  }
 }
 
 type SelectFn = (sel: Selection | null) => Promise<void>;
@@ -64,34 +81,35 @@ export function TreeNode({ entry }: TreeNodeProps) {
   }, [select, filename]);
 
   return (
-    <div role="treeitem" aria-expanded={open}>
-      <button
-        type="button"
-        className={`tree-node ${isVoyageSelected ? 'selected' : ''}`}
-        onClick={onSelectVoyage}
-      >
-        <span onClick={onToggle} role="button" aria-label={open ? 'Collapse' : 'Expand'}>
-          {chev(open)}
+    <div
+      role="treeitem"
+      id={treeitemId({ filename, kind: 'voyage' })}
+      aria-expanded={open}
+      aria-selected={isVoyageSelected}
+      tabIndex={-1}
+      className={`tree-node ${isVoyageSelected ? 'selected' : ''}`}
+      onClick={onSelectVoyage}
+      onKeyDown={(e) => activateOnEnterOrSpace(e, onSelectVoyage)}
+    >
+      <span onClick={onToggle}>{chev(open)}</span>
+      <span className="tree-icon" aria-hidden="true">⚓</span>
+      <span className="flex-1 truncate">{voyageRouteLabel(entry)}</span>
+      {entry.ended && (
+        <span
+          className="text-[0.55rem] font-bold px-1.5 py-0.5 rounded"
+          style={END_BADGE_STYLE}
+          title="Voyage ended"
+        >
+          END
         </span>
-        <span className="tree-icon">⚓</span>
-        <span className="flex-1 truncate">{voyageRouteLabel(entry)}</span>
-        {entry.ended && (
-          <span
-            className="text-[0.55rem] font-bold px-1.5 py-0.5 rounded"
-            style={END_BADGE_STYLE}
-            title="Voyage ended"
-          >
-            END
-          </span>
-        )}
-      </button>
+      )}
 
       {open && (
-        <div className="ml-4 pl-2 border-l" style={BORDER_SUBTLE_STYLE}>
+        <div className="ml-4 pl-2 border-l" role="group" style={BORDER_SUBTLE_STYLE} onClick={(e) => e.stopPropagation()}>
           {!v ? (
             <div className="tree-node" style={LOADING_STYLE}>
               {spacer()}
-              <span className="tree-icon">…</span>
+              <span className="tree-icon" aria-hidden="true">…</span>
               <span className="truncate italic">Loading…</span>
             </div>
           ) : (
@@ -153,16 +171,19 @@ const VoyageChildren = memo(function VoyageChildren({
   return (
     <>
       {/* Voyage Detail */}
-      <button
-        type="button"
+      <div
+        role="treeitem"
+        aria-selected={isDetailSelected}
+        tabIndex={-1}
         className="tree-node"
         onClick={onSelectDetail}
+        onKeyDown={(e) => activateOnEnterOrSpace(e, onSelectDetail)}
         style={isDetailSelected ? VOYAGE_DETAIL_SELECTED_STYLE : VOYAGE_DETAIL_UNSELECTED_STYLE}
       >
         {spacer()}
-        <span className="tree-icon">▤</span>
+        <span className="tree-icon" aria-hidden="true">▤</span>
         <span className="truncate">Voyage Detail</span>
-      </button>
+      </div>
 
       {/* Legs */}
       {sortedLegs.map((leg, idx) => {
@@ -181,15 +202,19 @@ const VoyageChildren = memo(function VoyageChildren({
 
       {/* Voyage End */}
       {voyage.voyageEnd && (
-        <button
-          type="button"
+        <div
+          role="treeitem"
+          id={treeitemId({ filename, kind: 'voyageEnd' })}
+          aria-selected={isEndSelected}
+          tabIndex={-1}
           className={`tree-node ${isEndSelected ? 'selected' : ''}`}
           onClick={onSelectEnd}
+          onKeyDown={(e) => activateOnEnterOrSpace(e, onSelectEnd)}
         >
           {spacer()}
-          <span className="tree-icon">⚑</span>
+          <span className="tree-icon" aria-hidden="true">⚑</span>
           <span className="truncate">Voyage End</span>
-        </button>
+        </div>
       )}
     </>
   );
@@ -216,19 +241,21 @@ const LegNode = memo(function LegNode({
   }, [select, filename, leg]);
 
   return (
-    <div role="treeitem">
-      <button
-        type="button"
-        className={`tree-node ${isLegSelected ? 'selected' : ''}`}
-        onClick={onRowClick}
-      >
-        {spacer()}
-        <span className="tree-icon">⇆</span>
-        <span className="flex-1 truncate">
-          <span className="font-mono text-[0.7rem]" style={LEG_NUM_STYLE}>L{index + 1}</span>{' '}
-          {depPort} → {arrPort}
-        </span>
-      </button>
+    <div
+      role="treeitem"
+      id={treeitemId({ filename, kind: 'leg', legId: leg.id })}
+      aria-selected={isLegSelected}
+      tabIndex={-1}
+      className={`tree-node ${isLegSelected ? 'selected' : ''}`}
+      onClick={onRowClick}
+      onKeyDown={(e) => activateOnEnterOrSpace(e, onRowClick)}
+    >
+      {spacer()}
+      <span className="tree-icon" aria-hidden="true">⇆</span>
+      <span className="flex-1 truncate">
+        <span className="font-mono text-[0.7rem]" style={LEG_NUM_STYLE}>L{index + 1}</span>{' '}
+        {depPort} → {arrPort}
+      </span>
     </div>
   );
 });

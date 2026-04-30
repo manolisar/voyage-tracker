@@ -20,7 +20,7 @@ import {
 import { useSession } from '../../hooks/useSession';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useToast } from '../../hooks/useToast';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import {
   pickDirectoryForShip,
   getHandleForShip,
@@ -82,7 +82,8 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shipId, shipClass?.id]);
 
-  useEscapeKey(onClose, !!busy);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, { onEscape: onClose, disabled: !!busy });
 
   // Show the current folder name for reassurance. If permission isn't
   // granted (shouldn't happen post-landing) show a dash.
@@ -208,6 +209,7 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
   return (
     <div className="modal-overlay" onClick={disabled ? undefined : onClose} role="presentation">
       <div
+        ref={dialogRef}
         className="modal-content w-full max-w-lg"
         onClick={(e) => e.stopPropagation()}
         role="dialog"

@@ -4,9 +4,9 @@
 // write goes through VoyageStore.createVoyage, which stamps a filename of
 // the form <SHIP_CODE>_<startDate>_<fromPort>-<toPort>.json.
 
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { PortCombobox } from '../ui/PortCombobox';
 import { X } from '../Icons';
 import type { PortRef, Ship, ShipClass } from '../../types/domain';
@@ -27,8 +27,9 @@ export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
   const [endDate, setEndDate] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  useEscapeKey(onClose, busy);
+  useFocusTrap(dialogRef, { onEscape: () => onClose(), disabled: busy });
 
   const canSubmit = !!fromPort?.code && !!toPort?.code && !!startDate && !busy && !!shipClass && !!ship?.code;
 
@@ -57,6 +58,7 @@ export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
   return (
     <div className="modal-overlay" onClick={busy ? undefined : () => onClose()} role="presentation">
       <div
+        ref={dialogRef}
         className="modal-content w-full max-w-xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"

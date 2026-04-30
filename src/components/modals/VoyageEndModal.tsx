@@ -2,9 +2,9 @@
 // Finalizes a voyage: aggregates per-leg fuel totals, collects the single
 // lub-oil entry (ME cons / 13S-14S / Used LO13C), engineer + notes + end-date.
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { calcVoyageTotals, formatMT } from '../../domain/calculations';
 import { voyageRouteLabel } from '../../domain/factories';
 import { X } from '../Icons';
@@ -38,8 +38,9 @@ export function VoyageEndModal({ filename, shipClass, onClose }: Props) {
   );
   const [notes, setNotes] = useState(voyage?.voyageEnd?.notes || '');
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  useEscapeKey(onClose);
+  useFocusTrap(dialogRef, { onEscape: onClose });
 
   const canSubmit = !!shipClass && !!voyage && !!endDate;
 
@@ -70,6 +71,7 @@ export function VoyageEndModal({ filename, shipClass, onClose }: Props) {
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div
+        ref={dialogRef}
         className="modal-content w-full"
         style={{ maxWidth: 760 }}
         onClick={(e) => e.stopPropagation()}

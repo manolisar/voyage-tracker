@@ -2,9 +2,9 @@
 // Appends a leg to the selected voyage. Defaults the `from` port to the
 // previous leg's `to` port and offers a carry-over of the last counters.
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { voyageRouteLabel } from '../../domain/factories';
 import { X } from '../Icons';
 import type { ShipClass } from '../../types/domain';
@@ -32,8 +32,9 @@ export function AddLegModal({ filename, shipClass, initialCounters = null, onClo
   const [arrDate, setArrDate] = useState('');
   const [carryOver, setCarryOver] = useState(!!lastLeg && !hasInitialCounters);
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  useEscapeKey(onClose);
+  useFocusTrap(dialogRef, { onEscape: onClose });
 
   const canSubmit = !!shipClass && !!voyage;
 
@@ -62,6 +63,7 @@ export function AddLegModal({ filename, shipClass, initialCounters = null, onClo
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div
+        ref={dialogRef}
         className="modal-content w-full max-w-xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"

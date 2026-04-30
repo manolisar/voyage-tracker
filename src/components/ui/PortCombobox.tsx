@@ -9,7 +9,7 @@
 //     for name + country; on confirm the port is persisted to IDB under
 //     customPorts/<shipId> and bubbles up via onChange.
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSession } from '../../hooks/useSession';
 import { loadPorts } from '../../domain/ports';
@@ -44,6 +44,9 @@ export function PortCombobox({
   autoFocus = false,
 }: Props) {
   const { shipId } = useSession();
+  const reactId = useId();
+  const listboxId = `${id ?? reactId}-listbox`;
+  const optionId = (i: number) => `${id ?? reactId}-opt-${i}`;
   const [catalog, setCatalog] = useState<PortRef[]>([]);
   const [customs, setCustoms] = useState<PortRef[]>([]);
   const [query, setQuery] = useState(value?.code || '');
@@ -219,12 +222,18 @@ export function PortCombobox({
     commit(port);
   }
 
+  const listboxOpen = open && !pendingUnknown && matches.length > 0 && !!popoverRect;
+
   return (
     <div className="relative">
-      {label && <div className="form-label" id={id ? `${id}-label` : undefined}>{label}</div>}
+      {label && (
+        <label className="form-label" htmlFor={id ?? reactId} id={id ? `${id}-label` : undefined}>
+          {label}
+        </label>
+      )}
       <input
         ref={inputRef}
-        id={id}
+        id={id ?? reactId}
         type="text"
         className="form-input font-mono"
         value={query}
@@ -239,10 +248,16 @@ export function PortCombobox({
         spellCheck={false}
         autoFocus={autoFocus}
         maxLength={5}
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={listboxOpen}
+        aria-controls={listboxId}
+        aria-activedescendant={listboxOpen ? optionId(highlight) : undefined}
       />
-      {open && !pendingUnknown && matches.length > 0 && popoverRect && createPortal(
+      {listboxOpen && createPortal(
         <ul
           ref={listRef}
+          id={listboxId}
           className="max-h-64 overflow-auto rounded-lg shadow-lg"
           role="listbox"
           style={{
@@ -258,6 +273,7 @@ export function PortCombobox({
           {matches.map((p, i) => (
             <li
               key={p.locode || p.code}
+              id={optionId(i)}
               role="option"
               aria-selected={i === highlight}
               className="px-3 py-2 text-sm cursor-pointer flex items-center justify-between"

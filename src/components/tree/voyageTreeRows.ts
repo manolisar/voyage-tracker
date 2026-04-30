@@ -12,6 +12,12 @@ export function selectionKey(sel: Selection | null | undefined): string {
   return `${sel.filename}|${sel.kind}|${sel.legId || ''}`;
 }
 
+// Stable DOM id for a treeitem — matches selectionKey so the parent tree's
+// aria-activedescendant can address it without a separate lookup.
+export function treeitemId(sel: Selection): string {
+  return `tree-${selectionKey(sel)}`;
+}
+
 export function flattenVoyageTreeRows(
   visibleVoyages: VoyageManifestEntry[],
   expanded: Set<string>,

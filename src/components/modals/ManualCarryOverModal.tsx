@@ -2,9 +2,9 @@
 // the target phase's START. Ported from v6 but data-driven over the ship
 // class's equipment list instead of hardcoded DG/boiler keys.
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { X } from '../Icons';
 import type { EquipmentDefinition, ShipClass } from '../../types/domain';
 
@@ -25,12 +25,13 @@ export function ManualCarryOverModal({ shipClass, onClose }: Props) {
     return s;
   };
   const [selected, setSelected] = useState<Record<string, boolean>>(initSelected);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   // Modal is mounted fresh each time the user opens the FAB (parent toggles
   // `carryOverOpen`), so `useState(initSelected)` runs with the current source
   // on every open — no sync effect needed.
 
-  useEscapeKey(onClose);
+  useFocusTrap(dialogRef, { onEscape: onClose, disabled: !source || !target || !shipClass });
 
   if (!source || !target || !shipClass) return null;
 
@@ -53,6 +54,7 @@ export function ManualCarryOverModal({ shipClass, onClose }: Props) {
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div
+        ref={dialogRef}
         className="modal-content w-full max-w-lg"
         onClick={(e) => e.stopPropagation()}
         role="dialog"

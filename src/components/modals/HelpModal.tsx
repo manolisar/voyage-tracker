@@ -3,8 +3,8 @@
 // section is independent so readers can scan headings and expand only what
 // they need.
 
-import type { ReactNode } from 'react';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useRef, type ReactNode } from 'react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { HelpCircle, X } from '../Icons';
 
 interface Props {
@@ -12,11 +12,13 @@ interface Props {
 }
 
 export function HelpModal({ onClose }: Props) {
-  useEscapeKey(onClose);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, { onEscape: onClose });
 
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div
+        ref={dialogRef}
         className="modal-content w-full max-w-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"

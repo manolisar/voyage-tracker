@@ -3,9 +3,9 @@
 // undo. The dropped leg is rewritten through the normal autosave path so the
 // loggedBy stamp records who removed it.
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { sortLegsByDate } from '../../domain/factories';
 import { X, AlertTriangle } from '../Icons';
 
@@ -24,8 +24,9 @@ export function DeleteLegModal({ filename, legId, onClose }: Props) {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  useEscapeKey(onClose, busy);
+  useFocusTrap(dialogRef, { onEscape: onClose, disabled: busy });
 
   const depPort = leg?.departure?.port?.split(',')[0]?.trim() || 'Dep';
   const arrPort = leg?.arrival?.port?.split(',')[0]?.trim() || 'Arr';
@@ -49,6 +50,7 @@ export function DeleteLegModal({ filename, legId, onClose }: Props) {
   return (
     <div className="modal-overlay" onClick={busy ? undefined : onClose} role="presentation">
       <div
+        ref={dialogRef}
         className="modal-content w-full max-w-lg"
         onClick={(e) => e.stopPropagation()}
         role="dialog"

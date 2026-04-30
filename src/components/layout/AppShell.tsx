@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSession } from '../../hooks/useSession';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
+import { useModalOpenCount } from '../../hooks/useFocusTrap';
 import { loadShips, loadShipClass } from '../../domain/shipClass';
 import { VoyageStoreProvider } from '../../contexts/VoyageStoreProvider';
 import { findPreviousEndedVoyage } from '../../contexts/voyageStore.helpers';
@@ -103,15 +104,99 @@ export function AppShell() {
 
   return (
     <VoyageStoreProvider key={shipId}>
-      <div className="flex flex-col flex-1 min-h-0">
-        <a href="#main-content" className="skip-link">Skip to main content</a>
+      <AppShellInner
+        ship={ship}
+        shipClass={shipClass}
+        sidebarOpen={sidebarOpen}
+        sidebarStyle={sidebarStyle}
+        editMode={editMode}
+        onToggleSidebar={() => setSidebarOpen((v) => !v)}
+        onEnableEdit={enterEditMode}
+        onNewVoyage={() => setNewVoyageOpen(true)}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenHelp={() => setHelpOpen(true)}
+        onAddLeg={(filename) => setAddLegFor(filename)}
+        onEndVoyage={(filename) => setEndVoyageFor(filename)}
+        onDeleteVoyage={(filename) => setDeleteVoyageFor(filename)}
+        onDeleteLeg={(filename, legId) => setDeleteLegFor({ filename, legId })}
+        settingsOpen={settingsOpen}
+        helpOpen={helpOpen}
+        newVoyageOpen={newVoyageOpen}
+        addLegFor={addLegFor}
+        endVoyageFor={endVoyageFor}
+        deleteVoyageFor={deleteVoyageFor}
+        deleteLegFor={deleteLegFor}
+        onCloseSettings={() => setSettingsOpen(false)}
+        onCloseHelp={() => setHelpOpen(false)}
+        onCloseNewVoyage={() => setNewVoyageOpen(false)}
+        onCloseAddLeg={() => setAddLegFor(null)}
+        onCloseEndVoyage={() => setEndVoyageFor(null)}
+        onCloseDeleteVoyage={() => setDeleteVoyageFor(null)}
+        onCloseDeleteLeg={() => setDeleteLegFor(null)}
+      />
+    </VoyageStoreProvider>
+  );
+}
+
+// AppShellInner renders inside VoyageStoreProvider so it can read
+// useModalOpenCount() (the StaleFile modal lives in this subtree). The
+// chrome (TopBar + sidebar + main pane) is wrapped in an inert-able div so
+// screen readers don't navigate behind an open dialog (audit C9).
+interface AppShellInnerProps {
+  ship: Ship | null;
+  shipClass: ShipClass | null;
+  sidebarOpen: boolean;
+  sidebarStyle: React.CSSProperties;
+  editMode: boolean;
+  onToggleSidebar: () => void;
+  onEnableEdit: () => void;
+  onNewVoyage: () => void;
+  onOpenSettings: () => void;
+  onOpenHelp: () => void;
+  onAddLeg: (filename: string) => void;
+  onEndVoyage: (filename: string) => void;
+  onDeleteVoyage: (filename: string) => void;
+  onDeleteLeg: (filename: string, legId: number) => void;
+  settingsOpen: boolean;
+  helpOpen: boolean;
+  newVoyageOpen: boolean;
+  addLegFor: string | null;
+  endVoyageFor: string | null;
+  deleteVoyageFor: string | null;
+  deleteLegFor: { filename: string; legId: number } | null;
+  onCloseSettings: () => void;
+  onCloseHelp: () => void;
+  onCloseNewVoyage: () => void;
+  onCloseAddLeg: () => void;
+  onCloseEndVoyage: () => void;
+  onCloseDeleteVoyage: () => void;
+  onCloseDeleteLeg: () => void;
+}
+
+function AppShellInner({
+  ship, shipClass, sidebarOpen, sidebarStyle, editMode,
+  onToggleSidebar, onEnableEdit, onNewVoyage, onOpenSettings, onOpenHelp,
+  onAddLeg, onEndVoyage, onDeleteVoyage, onDeleteLeg,
+  settingsOpen, helpOpen, newVoyageOpen,
+  addLegFor, endVoyageFor, deleteVoyageFor, deleteLegFor,
+  onCloseSettings, onCloseHelp, onCloseNewVoyage,
+  onCloseAddLeg, onCloseEndVoyage, onCloseDeleteVoyage, onCloseDeleteLeg,
+}: AppShellInnerProps) {
+  const modalOpenCount = useModalOpenCount();
+  const anyModalOpen = modalOpenCount > 0;
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0">
+      <a href="#main-content" className="skip-link">Skip to main content</a>
+
+      <div className="flex flex-col flex-1 min-h-0" inert={anyModalOpen}>
         <TopBar
           ship={ship}
-          onToggleSidebar={() => setSidebarOpen((v) => !v)}
-          onEnableEdit={enterEditMode}
-          onNewVoyage={() => setNewVoyageOpen(true)}
-          onOpenSettings={() => setSettingsOpen(true)}
-          onOpenHelp={() => setHelpOpen(true)}
+          onToggleSidebar={onToggleSidebar}
+          onEnableEdit={onEnableEdit}
+          onNewVoyage={onNewVoyage}
+          onOpenSettings={onOpenSettings}
+          onOpenHelp={onOpenHelp}
         />
 
         {!editMode && (
@@ -122,7 +207,6 @@ export function AppShell() {
               color: 'var(--color-dim)',
               borderColor: 'var(--color-border-subtle)',
             }}
-            role="status"
           >
             <Eye className="w-3.5 h-3.5" />
             <span>You are in <strong>View Only</strong>. Click <strong>Enable Edit Mode</strong> in the top bar to modify data.</span>
@@ -142,63 +226,63 @@ export function AppShell() {
             <DetailPane
               ship={ship}
               shipClass={shipClass}
-              onAddLeg={(filename) => setAddLegFor(filename)}
-              onEndVoyage={(filename) => setEndVoyageFor(filename)}
-              onDeleteVoyage={(filename) => setDeleteVoyageFor(filename)}
-              onDeleteLeg={(filename, legId) => setDeleteLegFor({ filename, legId })}
+              onAddLeg={onAddLeg}
+              onEndVoyage={onEndVoyage}
+              onDeleteVoyage={onDeleteVoyage}
+              onDeleteLeg={onDeleteLeg}
             />
           </main>
         </div>
-
-        {settingsOpen && (
-          <SettingsPanel shipClass={shipClass} onClose={() => setSettingsOpen(false)} />
-        )}
-
-        {helpOpen && (
-          <HelpModal onClose={() => setHelpOpen(false)} />
-        )}
-
-        <NewVoyageFlow
-          open={newVoyageOpen}
-          ship={ship}
-          shipClass={shipClass}
-          onClose={() => setNewVoyageOpen(false)}
-        />
-
-        {addLegFor && (
-          <AddLegModal
-            filename={addLegFor}
-            shipClass={shipClass}
-            onClose={() => setAddLegFor(null)}
-          />
-        )}
-
-        {endVoyageFor && (
-          <VoyageEndModal
-            filename={endVoyageFor}
-            shipClass={shipClass}
-            onClose={() => setEndVoyageFor(null)}
-          />
-        )}
-
-        {deleteVoyageFor && (
-          <DeleteVoyageModal
-            filename={deleteVoyageFor}
-            onClose={() => setDeleteVoyageFor(null)}
-          />
-        )}
-
-        {deleteLegFor && (
-          <DeleteLegModal
-            filename={deleteLegFor.filename}
-            legId={deleteLegFor.legId}
-            onClose={() => setDeleteLegFor(null)}
-          />
-        )}
-
-        <StaleFileModalHost />
       </div>
-    </VoyageStoreProvider>
+
+      {settingsOpen && (
+        <SettingsPanel shipClass={shipClass} onClose={onCloseSettings} />
+      )}
+
+      {helpOpen && (
+        <HelpModal onClose={onCloseHelp} />
+      )}
+
+      <NewVoyageFlow
+        open={newVoyageOpen}
+        ship={ship}
+        shipClass={shipClass}
+        onClose={onCloseNewVoyage}
+      />
+
+      {addLegFor && (
+        <AddLegModal
+          filename={addLegFor}
+          shipClass={shipClass}
+          onClose={onCloseAddLeg}
+        />
+      )}
+
+      {endVoyageFor && (
+        <VoyageEndModal
+          filename={endVoyageFor}
+          shipClass={shipClass}
+          onClose={onCloseEndVoyage}
+        />
+      )}
+
+      {deleteVoyageFor && (
+        <DeleteVoyageModal
+          filename={deleteVoyageFor}
+          onClose={onCloseDeleteVoyage}
+        />
+      )}
+
+      {deleteLegFor && (
+        <DeleteLegModal
+          filename={deleteLegFor.filename}
+          legId={deleteLegFor.legId}
+          onClose={onCloseDeleteLeg}
+        />
+      )}
+
+      <StaleFileModalHost />
+    </div>
   );
 }
 

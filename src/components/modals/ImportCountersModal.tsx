@@ -12,8 +12,8 @@
 // Data-driven over shipClass.equipment (no hardcoded keys), so adding a new
 // ship class doesn't require a code change here.
 
-import { useMemo, useState } from 'react';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useMemo, useRef, useState } from 'react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { inheritedCounter } from '../../domain/factories';
 import { Anchor, Check, X } from '../Icons';
 import type { ShipClass, Voyage } from '../../types/domain';
@@ -75,8 +75,9 @@ export function ImportCountersModal({
 
   const [selected, setSelected] = useState<Record<string, boolean>>(initialSelected);
   const [showSelection, setShowSelection] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  useEscapeKey(onClose);
+  useFocusTrap(dialogRef, { onEscape: onClose });
 
   const handleSelectAll = () => {
     const next: Record<string, boolean> = {};
@@ -111,6 +112,7 @@ export function ImportCountersModal({
     return (
       <div className="modal-overlay" onClick={onClose} role="presentation">
         <div
+          ref={dialogRef}
           className="modal-content w-full max-w-md"
           onClick={(e) => e.stopPropagation()}
           role="dialog"
@@ -178,6 +180,7 @@ export function ImportCountersModal({
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div
+        ref={dialogRef}
         className="modal-content w-full max-w-lg"
         onClick={(e) => e.stopPropagation()}
         role="dialog"

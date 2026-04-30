@@ -10,7 +10,8 @@
 // The actual reload / overwrite / cancel logic lives in
 // VoyageStoreProvider — this component is purely the dialog.
 
-import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useRef } from 'react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { X, Cloud } from '../Icons';
 
 interface Props {
@@ -30,11 +31,17 @@ export function StaleFileModal({
   onCancel,
   busy = false,
 }: Props) {
-  useEscapeKey(onCancel, busy);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  // Initial focus on the heading so the warning announces immediately to
+  // screen readers and the user isn't still typing into a form input that
+  // got obscured by this dialog (audit finding M19).
+  useFocusTrap(dialogRef, { onEscape: onCancel, disabled: busy, initialFocusRef: headingRef });
 
   return (
     <div className="modal-overlay" onClick={busy ? undefined : onCancel} role="presentation">
       <div
+        ref={dialogRef}
         className="modal-content w-full max-w-lg"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -48,7 +55,7 @@ export function StaleFileModal({
           <div className="flex items-start gap-3">
             <Cloud className="w-6 h-6 mt-0.5 shrink-0" />
             <div>
-              <h2 id="stale-file-title" style={{ color: 'inherit' }}>File changed on disk</h2>
+              <h2 id="stale-file-title" ref={headingRef} tabIndex={-1} style={{ color: 'inherit', outline: 'none' }}>File changed on disk</h2>
               <p style={{ color: 'inherit', opacity: 0.85 }}>
                 Another crew member saved <strong>{voyageLabel || filename}</strong> in the shared folder while you were editing.
               </p>
