@@ -91,38 +91,42 @@ export function ReportForm({ report, onChange, densities, shipClass, readOnly = 
 
   const FUEL_KEYS: FuelKey[] = ['HFO', 'MGO', 'LSFO'];
 
+  const reportBodyId = `report-body-${isDeparture ? 'dep' : 'arr'}`;
   return (
     <div className="glass-card rounded-xl overflow-hidden mb-5 animate-slide-up">
-      <div
-        className="report-head px-5 py-3.5 cursor-pointer flex justify-between items-center transition-all"
+      <button
+        type="button"
+        className="report-head px-5 py-3.5 w-full cursor-pointer flex justify-between items-center transition-all text-left"
         onClick={() => setCollapsed(!collapsed)}
+        aria-expanded={!collapsed}
+        aria-controls={reportBodyId}
       >
-        <div className="flex items-center gap-3">
+        <span className="flex items-center gap-3">
           <span className={`transition-transform duration-300 ${collapsed ? '' : 'rotate-90'}`}
-                style={{ color: 'var(--color-faint)' }}>
+                style={{ color: 'var(--color-faint)' }} aria-hidden="true">
             <ChevronRight className="w-4 h-4" />
           </span>
-          <div>
-            <h2 className="text-[0.88rem] font-bold flex items-center gap-2" style={{ color: 'var(--color-text)' }}>
-              <span style={{ color: isDeparture ? 'var(--color-ocean-500)' : 'var(--color-mgo)' }}>
+          <span>
+            <h3 className="text-[0.88rem] font-bold flex items-center gap-2" style={{ color: 'var(--color-text)' }}>
+              <span style={{ color: isDeparture ? 'var(--color-ocean-500)' : 'var(--color-mgo)' }} aria-hidden="true">
                 {isDeparture ? '🚢' : '⚓'}
               </span>
               <span>{isDeparture ? 'Departure' : 'Arrival'}</span>
-              <span style={{ color: 'var(--color-faint)' }}>{'–'}</span>
+              <span style={{ color: 'var(--color-faint)' }} aria-hidden="true">{'–'}</span>
               <span>{report.port || 'No port'}</span>
-            </h2>
+            </h3>
             {collapsed && (
-              <p className="text-[0.65rem] mt-0.5 font-mono" style={{ color: 'var(--color-dim)' }}>
+              <span className="block text-[0.65rem] mt-0.5 font-mono" style={{ color: 'var(--color-dim)' }}>
                 {report.date || 'No date'} {'•'} {report.phases.length} phases
-              </p>
+              </span>
             )}
-          </div>
-        </div>
+          </span>
+        </span>
         <span className="total-pill mono">{totalConsumption.toFixed(2)} MT</span>
-      </div>
+      </button>
 
       {!collapsed && (
-        <div className="p-5">
+        <div className="p-5" id={reportBodyId}>
           {/* Header fields: date / port / engineer / time events */}
           <div className="grid grid-cols-4 gap-4 mb-6">
             <div>

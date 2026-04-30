@@ -236,6 +236,13 @@ export function ImportCountersModal({
                 <button
                   key={def.key}
                   type="button"
+                  role="checkbox"
+                  aria-checked={on}
+                  aria-label={
+                    hasValue
+                      ? `Import ${def.label} counter${!selected[def.key] ? ' (RESET — will not carry over)' : ''}`
+                      : `${def.label} — no data to import`
+                  }
                   disabled={!hasValue}
                   onClick={() => hasValue && handleToggle(def.key)}
                   className="w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all text-left"

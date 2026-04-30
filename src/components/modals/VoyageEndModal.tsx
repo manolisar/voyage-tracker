@@ -2,7 +2,7 @@
 // Finalizes a voyage: aggregates per-leg fuel totals, collects the single
 // lub-oil entry (ME cons / 13S-14S / Used LO13C), engineer + notes + end-date.
 
-import { useMemo, useRef, useState, type FormEvent } from 'react';
+import { useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { calcVoyageTotals, formatMT } from '../../domain/calculations';
@@ -39,6 +39,7 @@ export function VoyageEndModal({ filename, shipClass, onClose }: Props) {
   const [notes, setNotes] = useState(voyage?.voyageEnd?.notes || '');
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const fid = useId();
 
   useFocusTrap(dialogRef, { onEscape: onClose });
 
@@ -127,8 +128,9 @@ export function VoyageEndModal({ filename, shipClass, onClose }: Props) {
             <div className="cat-label">Lub-Oil · recorded at voyage end</div>
             <div className="cat-body grid grid-cols-3 gap-3">
               <div>
-                <div className="form-label">ME consumption</div>
+                <label className="form-label" htmlFor={`${fid}-mecons`}>ME consumption</label>
                 <input
+                  id={`${fid}-mecons`}
                   className="form-input font-mono"
                   placeholder="0"
                   inputMode="decimal"
@@ -137,8 +139,9 @@ export function VoyageEndModal({ filename, shipClass, onClose }: Props) {
                 />
               </div>
               <div>
-                <div className="form-label">13S / 14S</div>
+                <label className="form-label" htmlFor={`${fid}-13s14s`}>13S / 14S</label>
                 <input
+                  id={`${fid}-13s14s`}
                   className="form-input font-mono"
                   placeholder="0"
                   inputMode="decimal"
@@ -147,8 +150,9 @@ export function VoyageEndModal({ filename, shipClass, onClose }: Props) {
                 />
               </div>
               <div>
-                <div className="form-label">Used LO13C</div>
+                <label className="form-label" htmlFor={`${fid}-lo13c`}>Used LO13C</label>
                 <input
+                  id={`${fid}-lo13c`}
                   className="form-input font-mono"
                   placeholder="0"
                   inputMode="decimal"
@@ -162,8 +166,9 @@ export function VoyageEndModal({ filename, shipClass, onClose }: Props) {
           {/* Signature + notes */}
           <div className="glass-card rounded-xl p-4 grid grid-cols-2 gap-4">
             <div>
-              <div className="form-label">Chief engineer</div>
+              <label className="form-label" htmlFor={`${fid}-engineer`}>Chief engineer</label>
               <input
+                id={`${fid}-engineer`}
                 className="form-input"
                 placeholder="Name · signature"
                 value={engineer}
@@ -171,8 +176,9 @@ export function VoyageEndModal({ filename, shipClass, onClose }: Props) {
               />
             </div>
             <div>
-              <div className="form-label">Ended on</div>
+              <label className="form-label" htmlFor={`${fid}-end`}>Ended on</label>
               <input
+                id={`${fid}-end`}
                 type="date"
                 className="form-input font-mono"
                 value={endDate}
@@ -180,8 +186,9 @@ export function VoyageEndModal({ filename, shipClass, onClose }: Props) {
               />
             </div>
             <div className="col-span-2">
-              <div className="form-label">Notes</div>
+              <label className="form-label" htmlFor={`${fid}-notes`}>Notes</label>
               <textarea
+                id={`${fid}-notes`}
                 className="form-input"
                 rows={3}
                 placeholder="Any remarks for this voyage…"

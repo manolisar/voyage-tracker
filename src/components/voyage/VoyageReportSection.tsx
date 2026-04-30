@@ -186,41 +186,43 @@ export function VoyageReportSection({
   const sbeToBerthSpeed = displayAvg(vr.arrival.sbeToBerth.distance, minutesToDecimalHours(aMins));
   const voyageAvgSpeed = displayAvg(vr.voyage.totalMiles, steamingTimeToDecimalHours(vr.voyage.steamingTime));
 
+  const navBodyId = 'voyage-report-body';
   return (
     <div className="cat-card nav rounded-xl overflow-hidden mb-4">
-      <div
-        className="px-4 py-2.5 cursor-pointer flex justify-between items-center transition-all"
-        onClick={() => setCollapsed(!collapsed)}
-      >
-        <div className="flex items-center gap-2.5">
+      <div className="px-4 py-2.5 flex justify-between items-center transition-all">
+        <button
+          type="button"
+          className="flex-1 flex items-center gap-2.5 cursor-pointer text-left"
+          onClick={() => setCollapsed(!collapsed)}
+          aria-expanded={!collapsed}
+          aria-controls={navBodyId}
+        >
           <span className={`transition-transform duration-300 ${collapsed ? '' : 'rotate-90'}`}
-                style={{ color: 'var(--color-faint)' }}>
+                style={{ color: 'var(--color-faint)' }} aria-hidden="true">
             <ChevronRight className="w-4 h-4" />
           </span>
-          <span style={{ color: 'var(--color-water)' }}>
+          <span style={{ color: 'var(--color-water)' }} aria-hidden="true">
             <Compass className="w-4 h-4" />
           </span>
-          <div>
+          <span>
             <span className="cat-label" style={{ padding: 0, letterSpacing: '1.5px' }}>Nav Report</span>
             {collapsed && (
-              <p className="text-[0.6rem] font-mono mt-0.5" style={{ color: 'var(--color-dim)' }}>
+              <span className="block text-[0.6rem] font-mono mt-0.5" style={{ color: 'var(--color-dim)' }}>
                 {depPort || 'From'} {'→'} {arrPort || 'To'}
                 {vr.voyage.totalMiles ? ` • ${vr.voyage.totalMiles} nm` : ''}
                 {voyageAvgSpeed !== '–' ? ` • ${voyageAvgSpeed} kts` : ''}
-              </p>
+              </span>
             )}
-          </div>
-        </div>
+          </span>
+        </button>
         <div className="flex items-center gap-2">
           {vr.voyage.totalMiles && (
             <span className="total-pill mono text-[0.75rem]">{vr.voyage.totalMiles} nm</span>
           )}
           {!readOnly && onDelete && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
+              type="button"
+              onClick={onDelete}
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: 'var(--color-faint)' }}
               title="Remove Nav Report"
@@ -233,7 +235,7 @@ export function VoyageReportSection({
       </div>
 
       {!collapsed && (
-        <div style={{ borderTop: '1px solid var(--color-water-border)' }}>
+        <div id={navBodyId} style={{ borderTop: '1px solid var(--color-water-border)' }}>
           {/* Top row: ports + dates (read-only, sourced from engine reports) */}
           <div className="grid grid-cols-4 gap-3 px-4 py-2.5"
                style={{ background: 'rgba(2,132,199,0.03)' }}>

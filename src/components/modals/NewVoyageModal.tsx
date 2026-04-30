@@ -4,7 +4,7 @@
 // write goes through VoyageStore.createVoyage, which stamps a filename of
 // the form <SHIP_CODE>_<startDate>_<fromPort>-<toPort>.json.
 
-import { useRef, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { PortCombobox } from '../ui/PortCombobox';
@@ -28,6 +28,7 @@ export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const fid = useId();
 
   useFocusTrap(dialogRef, { onEscape: () => onClose(), disabled: busy });
 
@@ -100,8 +101,9 @@ export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
             />
           </div>
           <div>
-            <div className="form-label">Start date</div>
+            <label className="form-label" htmlFor={`${fid}-start`}>Start date</label>
             <input
+              id={`${fid}-start`}
               type="date"
               className="form-input font-mono"
               value={startDate}
@@ -110,8 +112,11 @@ export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
             />
           </div>
           <div>
-            <div className="form-label">End date <span style={{ color: 'var(--color-faint)' }}>(optional)</span></div>
+            <label className="form-label" htmlFor={`${fid}-end`}>
+              End date <span style={{ color: 'var(--color-faint)' }}>(optional)</span>
+            </label>
             <input
+              id={`${fid}-end`}
               type="date"
               className="form-input font-mono"
               value={endDate}

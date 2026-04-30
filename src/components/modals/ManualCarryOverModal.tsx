@@ -92,6 +92,9 @@ export function ManualCarryOverModal({ shipClass, onClose }: Props) {
                 <button
                   key={def.key}
                   type="button"
+                  role="checkbox"
+                  aria-checked={on}
+                  aria-label={`Carry over ${def.label}${can ? '' : ' (no value to carry)'}`}
                   disabled={!can}
                   onClick={() => can && setSelected((s) => ({ ...s, [def.key]: !s[def.key] }))}
                   className="w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all text-left"

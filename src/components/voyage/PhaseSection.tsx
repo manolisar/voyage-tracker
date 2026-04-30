@@ -152,18 +152,12 @@ export function PhaseSection({
         <table className="w-full text-sm">
           <thead style={{ background: 'var(--color-surface2)' }}>
             <tr>
-              <th className="py-2.5 px-4 text-left text-[0.5rem] font-bold tracking-[1.2px] uppercase border-b w-28"
-                  style={{ color: 'var(--color-faint)', borderColor: 'var(--color-border-subtle)' }}>Equipment</th>
-              <th className="py-2.5 px-4 text-left text-[0.5rem] font-bold tracking-[1.2px] uppercase border-b w-24"
-                  style={{ color: 'var(--color-faint)', borderColor: 'var(--color-border-subtle)' }}>Fuel</th>
-              <th className="py-2.5 px-4 text-left text-[0.5rem] font-bold tracking-[1.2px] uppercase border-b w-32 mono"
-                  style={{ color: 'var(--color-faint)', borderColor: 'var(--color-border-subtle)' }}>Start (m³)</th>
-              <th className="py-2.5 px-4 text-left text-[0.5rem] font-bold tracking-[1.2px] uppercase border-b w-32 mono"
-                  style={{ color: 'var(--color-faint)', borderColor: 'var(--color-border-subtle)' }}>End (m³)</th>
-              <th className="py-2.5 px-4 text-right text-[0.5rem] font-bold tracking-[1.2px] uppercase border-b w-24 mono"
-                  style={{ color: 'var(--color-faint)', borderColor: 'var(--color-border-subtle)' }}>Diff</th>
-              <th className="py-2.5 px-4 text-right text-[0.5rem] font-bold tracking-[1.2px] uppercase border-b w-24 mono"
-                  style={{ color: 'var(--color-faint)', borderColor: 'var(--color-border-subtle)' }}>MT</th>
+              <th scope="col" className="eq-th w-28">Equipment</th>
+              <th scope="col" className="eq-th w-24">Fuel</th>
+              <th scope="col" className="eq-th eq-th-mono w-32">Start (m³)</th>
+              <th scope="col" className="eq-th eq-th-mono w-32">End (m³)</th>
+              <th scope="col" className="eq-th eq-th-right eq-th-mono w-24">Diff</th>
+              <th scope="col" className="eq-th eq-th-right eq-th-mono w-24">MT</th>
             </tr>
           </thead>
           <tbody>

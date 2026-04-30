@@ -2,7 +2,7 @@
 // Appends a leg to the selected voyage. Defaults the `from` port to the
 // previous leg's `to` port and offers a carry-over of the last counters.
 
-import { useMemo, useRef, useState, type FormEvent } from 'react';
+import { useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { voyageRouteLabel } from '../../domain/factories';
@@ -33,6 +33,7 @@ export function AddLegModal({ filename, shipClass, initialCounters = null, onClo
   const [carryOver, setCarryOver] = useState(!!lastLeg && !hasInitialCounters);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const fid = useId();
 
   useFocusTrap(dialogRef, { onEscape: onClose });
 
@@ -90,8 +91,9 @@ export function AddLegModal({ filename, shipClass, initialCounters = null, onClo
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className="form-label">From port</div>
+              <label className="form-label" htmlFor={`${fid}-from`}>From port</label>
               <input
+                id={`${fid}-from`}
                 type="text"
                 className="form-input"
                 placeholder="e.g. Hong Kong"
@@ -101,8 +103,9 @@ export function AddLegModal({ filename, shipClass, initialCounters = null, onClo
               />
             </div>
             <div>
-              <div className="form-label">To port</div>
+              <label className="form-label" htmlFor={`${fid}-to`}>To port</label>
               <input
+                id={`${fid}-to`}
                 type="text"
                 className="form-input"
                 placeholder="e.g. Shanghai"
@@ -111,8 +114,9 @@ export function AddLegModal({ filename, shipClass, initialCounters = null, onClo
               />
             </div>
             <div>
-              <div className="form-label">Departure date</div>
+              <label className="form-label" htmlFor={`${fid}-depdate`}>Departure date</label>
               <input
+                id={`${fid}-depdate`}
                 type="date"
                 className="form-input font-mono"
                 value={depDate}
@@ -120,8 +124,9 @@ export function AddLegModal({ filename, shipClass, initialCounters = null, onClo
               />
             </div>
             <div>
-              <div className="form-label">Arrival date</div>
+              <label className="form-label" htmlFor={`${fid}-arrdate`}>Arrival date</label>
               <input
+                id={`${fid}-arrdate`}
                 type="date"
                 className="form-input font-mono"
                 value={arrDate}
