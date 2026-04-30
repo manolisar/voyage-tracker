@@ -28,7 +28,7 @@ import type { Voyage } from '../../types/domain';
 import type { EditorRole } from '../../domain/constants';
 
 export interface AdapterSession {
-  userName?: string;
+  userName?: string | null;
   role?: EditorRole | string | null;
 }
 

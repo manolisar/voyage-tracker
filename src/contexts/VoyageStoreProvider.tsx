@@ -17,6 +17,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -68,10 +69,15 @@ import {
 } from './voyageStore.helpers';
 import type { SessionSnapshot } from './SessionContext';
 
-// Module-level session getter. Updated on every render below so the adapter's
-// loggedBy stamp always sees the freshest session without needing a rebuild.
-let sessionGetter: () => SessionSnapshot | null = () => null;
-setStorageAdapter(createLocalAdapter({ getSession: () => sessionGetter() }));
+// Module-level session getter ref. Held inside an object so the adapter
+// captures the box at install time and reads the current value at call
+// time — eliminates the StrictMode / ship-switch race window where a stale
+// `getSessionSnapshot` closure could stamp the wrong loggedBy.role on a
+// save that happens between unmount and re-mount.
+const sessionGetterRef: { current: () => SessionSnapshot | null } = {
+  current: () => null,
+};
+setStorageAdapter(createLocalAdapter({ getSession: () => sessionGetterRef.current() }));
 
 const CODE_RE = /^[A-Z]{3}$/;
 
@@ -80,11 +86,12 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
   const { addToast } = useToast();
   // One toast per outage — don't spam the user for every burst-save retry.
   const offlineNotifiedRef = useRef(false);
-  // Keep the module-level session getter pointing at the live one. Done in an
-  // effect (not render) to satisfy the react-hooks purity rule; the adapter
-  // only invokes getSession inside saveVoyage which always runs after mount.
-  useEffect(() => {
-    sessionGetter = getSessionSnapshot;
+  // Sync the module-level session getter ref synchronously before paint.
+  // useLayoutEffect (not useEffect) shrinks the ship-switch race window:
+  // by the time the new VoyageStoreProvider has rendered, any subsequent
+  // adapter.saveVoyage call sees the new ship's session getter.
+  useLayoutEffect(() => {
+    sessionGetterRef.current = getSessionSnapshot;
   }, [getSessionSnapshot]);
 
   const [voyages, setVoyages] = useState<VoyageManifestEntry[]>([]);
@@ -408,7 +415,7 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       // top of the shipClass baseline so crew tweaks (e.g. a ship that's been
       // burning a different HFO cut for a month) flow into every new voyage.
       const settings = await getShipSettings(shipId);
-      const overrideDensities = (settings?.defaultDensities ?? {}) as Partial<typeof base.densities>;
+      const overrideDensities: Partial<typeof base.densities> = settings?.defaultDensities ?? {};
       const densities = { ...base.densities, ...overrideDensities };
       const voyage: Voyage = {
         ...base,

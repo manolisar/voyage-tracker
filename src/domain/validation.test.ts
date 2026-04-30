@@ -35,9 +35,9 @@ describe('validateVoyageData', () => {
       { id: 1, legs: [], shipId: 'SL' },
       { shipClass: solsticeClass },
     );
-    expect(r.data.densities.HFO).toBe(0.92);
-    expect(r.data.densities.MGO).toBe(0.83);
-    expect(r.data.densities.LSFO).toBe(0.92);
+    expect(r.data!.densities.HFO).toBe(0.92);
+    expect(r.data!.densities.MGO).toBe(0.83);
+    expect(r.data!.densities.LSFO).toBe(0.92);
   });
 
   it('preserves user-provided densities, only filling gaps', () => {
@@ -45,9 +45,9 @@ describe('validateVoyageData', () => {
       { id: 1, legs: [], shipId: 'SL', densities: { HFO: 0.95 } },
       { shipClass: solsticeClass },
     );
-    expect(r.data.densities.HFO).toBe(0.95);
-    expect(r.data.densities.MGO).toBe(0.83);
-    expect(r.data.densities.LSFO).toBe(0.92);
+    expect(r.data!.densities.HFO).toBe(0.95);
+    expect(r.data!.densities.MGO).toBe(0.83);
+    expect(r.data!.densities.LSFO).toBe(0.92);
   });
 
   it('backfills missing fromPort/toPort as empty PortRef (not undefined)', () => {
@@ -55,8 +55,8 @@ describe('validateVoyageData', () => {
       { id: 1, legs: [], shipId: 'SL' },
       { shipClass: solsticeClass },
     );
-    expect(r.data.fromPort).toEqual({ code: '', name: '', country: '', locode: '' });
-    expect(r.data.toPort).toEqual({ code: '', name: '', country: '', locode: '' });
+    expect(r.data!.fromPort).toEqual({ code: '', name: '', country: '', locode: '' });
+    expect(r.data!.toPort).toEqual({ code: '', name: '', country: '', locode: '' });
   });
 
   it('backfills leg.voyageReport to null when missing', () => {
@@ -64,7 +64,7 @@ describe('validateVoyageData', () => {
       { id: 1, shipId: 'SL', legs: [{ id: 1, departure: {}, arrival: {} }] },
       { shipClass: solsticeClass },
     );
-    expect(r.data.legs[0].voyageReport).toBeNull();
+    expect(r.data!.legs[0].voyageReport).toBeNull();
   });
 
   it('flags out-of-range densities (zero, > 2)', () => {
@@ -94,7 +94,7 @@ describe('validateVoyageData', () => {
       { id: 1, shipId: 'SL', legs: [], version: '6.0.0' },
       { shipClass: solsticeClass },
     );
-    expect(r.data.version).toBe(APP_VERSION);
+    expect(r.data!.version).toBe(APP_VERSION);
   });
 
   it('returns valid=true when all required fields are present and densities are sane', () => {

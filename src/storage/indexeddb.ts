@@ -57,7 +57,10 @@ export interface DirHandleRecord {
 }
 
 export interface ShipSettings {
-  densities?: Partial<Record<FuelKey, number>>;
+  // Per-ship overrides for the ship class's baseline fuel densities. Applied
+  // at voyage creation time on top of the class baseline. The key matches
+  // what's persisted on disk in IDB.
+  defaultDensities?: Partial<Record<FuelKey, number>>;
   [key: string]: unknown;
 }
 

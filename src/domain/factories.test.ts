@@ -136,9 +136,9 @@ describe('defaultLeg', () => {
   it('always seeds a non-null voyageReport', () => {
     const leg = defaultLeg(solsticeClass);
     expect(leg.voyageReport).not.toBeNull();
-    expect(leg.voyageReport.voyage).toBeDefined();
-    expect(leg.voyageReport.departure).toBeDefined();
-    expect(leg.voyageReport.arrival).toBeDefined();
+    expect(leg.voyageReport!.voyage).toBeDefined();
+    expect(leg.voyageReport!.departure).toBeDefined();
+    expect(leg.voyageReport!.arrival).toBeDefined();
   });
 });
 

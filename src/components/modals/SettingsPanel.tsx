@@ -64,9 +64,7 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
     (async () => {
       const settings = await getShipSettings(shipId);
       if (!alive) return;
-      const overrides =
-        (settings as { defaultDensities?: Partial<Record<FuelKey, number>> } | null | undefined)
-          ?.defaultDensities || {};
+      const overrides = settings?.defaultDensities || {};
       const merged: Record<string, string> = {};
       for (const fuel of Object.keys(baseline) as FuelKey[]) {
         const v = overrides[fuel] ?? baseline[fuel];
@@ -272,7 +270,7 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
                   t/m³ @ Counters — applied to new voyages on this ship. Existing voyages keep their own densities.
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-3">
-                  {Object.keys(baseline).map((fuel) => (
+                  {(Object.keys(baseline) as FuelKey[]).map((fuel) => (
                     <label key={fuel} className="flex flex-col gap-1">
                       <span className="form-label">{fuel}</span>
                       <input
