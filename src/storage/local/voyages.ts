@@ -9,26 +9,13 @@
 
 import { NotFoundError } from '../adapter';
 import { getHandleForShip } from './fsHandle';
-import { PathSafetyError, StaleFileError } from './errors';
+import { StaleFileError } from './errors';
+import { ensureSafeFilename } from './safeFilename';
 import type { PortRef, Voyage, VoyageManifestEntry } from '../../types/domain';
 
-// ── Filename safety ──────────────────────────────────────────────────────
-// We no longer enforce a per-ship path prefix — the directory handle IS the
-// scope boundary — but filename validation still matters because these
-// strings become actual filenames on the ship's share.
-
-const FILENAME_RE = /^[A-Za-z0-9._-]+$/;
-
-export function ensureSafeFilename(filename: unknown): asserts filename is string {
-  if (
-    typeof filename !== 'string' ||
-    !filename ||
-    !FILENAME_RE.test(filename) ||
-    filename.includes('..')
-  ) {
-    throw new PathSafetyError(`Invalid filename: ${JSON.stringify(filename)}`);
-  }
-}
+// Filename safety lives in ./safeFilename.ts — re-export so existing imports
+// (used by tests and a couple of helpers) keep working without a churn pass.
+export { ensureSafeFilename };
 
 // ── Small helpers ────────────────────────────────────────────────────────
 

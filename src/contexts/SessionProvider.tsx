@@ -102,7 +102,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (!u) throw new Error('startSession: userName required');
     if (!isEditorRole(r)) throw new Error(`startSession: invalid role ${JSON.stringify(r)}`);
     setShipId(s);
-    setUserName(String(u).trim());
+    // Cap at 64 chars — `loggedBy.name` ends up rendered into the tree's leg
+    // tooltips and the voyage detail header, so unbounded input could bloat
+    // every voyage file and stretch the UI. 64 covers every real name.
+    setUserName(String(u).trim().slice(0, 64));
     setRole(r);
     setEditMode(false);
   }, []);

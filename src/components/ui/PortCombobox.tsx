@@ -17,6 +17,8 @@ import { getCustomPorts, addCustomPort } from '../../storage/indexeddb';
 import type { PortRef } from '../../types/domain';
 
 const CODE_RE = /^[A-Z]{3}$/;
+const COUNTRY_RE = /^[A-Z]{2}$/;
+const MAX_PORT_NAME_LEN = 64;
 
 interface Props {
   id?: string;
@@ -207,9 +209,12 @@ export function PortCombobox({
   async function confirmPendingUnknown() {
     if (!pendingUnknown) return;
     const { code, name, country } = pendingUnknown;
-    const trimmedName = (name || '').trim();
+    // Trim + length-cap the name so "obscure port" doesn't become a vector for
+    // unbounded data persisted in IDB. Country must be exactly two A–Z letters
+    // so dropdowns don't pick up leftover whitespace or punctuation.
+    const trimmedName = (name || '').trim().slice(0, MAX_PORT_NAME_LEN);
     const cc = (country || '').trim().toUpperCase();
-    if (!CODE_RE.test(code) || !trimmedName || cc.length !== 2) return;
+    if (!CODE_RE.test(code) || !trimmedName || !COUNTRY_RE.test(cc)) return;
     const port: PortRef = { code, name: trimmedName, country: cc, locode: `${cc}${code}` };
     if (shipId) {
       try {

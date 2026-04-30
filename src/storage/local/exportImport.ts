@@ -31,11 +31,19 @@
 // what's unambiguously a voyage.
 
 import { getHandleForShip } from './fsHandle';
-import { PathSafetyError } from './errors';
+import { ensureSafeFilename } from './safeFilename';
+import { APP_VERSION } from '../../domain/constants';
 
 const BUNDLE_VERSION = 1;
-const APP_VERSION = '8.0.0';
-const FILENAME_RE = /^[A-Za-z0-9._-]+$/;
+// 25 MB cap on imported bundles. A real export with thousands of voyages is
+// nowhere near this; the cap exists so a malformed / hostile multi-MB file
+// can't OOM the tab during JSON.parse and so a runaway bundle can't fill
+// the SMB share. The legitimate ceiling is ~5 MB for several years of data.
+const MAX_BUNDLE_BYTES = 25 * 1024 * 1024;
+// _index.json is a reserved name on disk; we filter it from buildBundle and
+// must filter it from importBundle as well so a malicious bundle can't seed
+// attacker-controlled data into a future read-side index path.
+const RESERVED_FILENAMES = new Set(['_index.json']);
 
 export interface BundleEntry {
   filename: string;
@@ -56,20 +64,24 @@ export interface ImportSummary {
 }
 
 // Subset of the File API used by parseBundleFile — accepts real File objects
-// or test fakes that implement just .text() and .name.
+// or test fakes that implement just .text() and .name (and optional .size).
 interface FileLike {
   text: () => Promise<string>;
   name: string;
+  size?: number;
 }
 
-function ensureSafeFilename(filename: unknown): asserts filename is string {
-  if (
-    typeof filename !== 'string' ||
-    !filename ||
-    !FILENAME_RE.test(filename) ||
-    filename.includes('..')
-  ) {
-    throw new PathSafetyError(`Invalid filename in bundle: ${JSON.stringify(filename)}`);
+// Bundle entries should look like a Voyage on the wire — at minimum a `legs`
+// array. We don't run the full schema validator here (validateVoyageData is
+// for the per-file load path); this is a structural shape check so a hostile
+// bundle can't drop arbitrary objects into the share.
+function ensureVoyageShape(content: unknown, filename: string): void {
+  if (!content || typeof content !== 'object' || Array.isArray(content)) {
+    throw new Error(`Voyage ${filename} must have a content object`);
+  }
+  const c = content as Record<string, unknown>;
+  if (!Array.isArray(c.legs)) {
+    throw new Error(`Voyage ${filename} is missing a legs array`);
   }
 }
 
@@ -161,6 +173,12 @@ export function maybeWrapSingleVoyage(parsed: unknown, file: FileLike): Bundle |
  *      wrapped on the fly; see `maybeWrapSingleVoyage` above.
  */
 export async function parseBundleFile(file: FileLike): Promise<Bundle> {
+  if (typeof file.size === 'number' && file.size > MAX_BUNDLE_BYTES) {
+    throw new Error(
+      `Bundle is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB; ` +
+        `max ${MAX_BUNDLE_BYTES / (1024 * 1024)} MB). Split the export or contact IT.`,
+    );
+  }
   const text = await file.text();
   let parsed: unknown;
   try {
@@ -195,9 +213,7 @@ export async function parseBundleFile(file: FileLike): Promise<Bundle> {
     if (!v || typeof v !== 'object') throw new Error('Each voyage entry must be an object');
     const entry = v as Record<string, unknown>;
     ensureSafeFilename(entry.filename);
-    if (!entry.content || typeof entry.content !== 'object') {
-      throw new Error(`Voyage ${String(entry.filename)} is missing a content object`);
-    }
+    ensureVoyageShape(entry.content, entry.filename as string);
   }
   return p as unknown as Bundle;
 }
@@ -224,6 +240,12 @@ export async function importBundle(bundle: Bundle, targetShipId: string): Promis
   const written: string[] = [];
   const skipped: string[] = [];
   for (const v of bundle.voyages) {
+    // Reserved names (e.g. _index.json) are filtered on read; mirror the
+    // filter on write so a hostile bundle can't seed one regardless.
+    if (RESERVED_FILENAMES.has(v.filename)) {
+      skipped.push(v.filename);
+      continue;
+    }
     if (existing.has(v.filename)) {
       skipped.push(v.filename);
       continue;
