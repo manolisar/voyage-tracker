@@ -80,6 +80,11 @@ export function TreeNode({ entry }: TreeNodeProps) {
     select({ filename, kind: 'voyage' });
   }, [select, filename]);
 
+  // Split the treeitem wrapper from the visual row: the wrapper carries
+  // role/aria/tabIndex but no flex layout, the row inside owns the
+  // `.tree-node` flex styling and click handlers, and the children group is
+  // a sibling of the row (NOT a child of the flex row) so legs lay out
+  // correctly under the title instead of being squeezed beside it.
   return (
     <div
       role="treeitem"
@@ -87,25 +92,28 @@ export function TreeNode({ entry }: TreeNodeProps) {
       aria-expanded={open}
       aria-selected={isVoyageSelected}
       tabIndex={-1}
-      className={`tree-node ${isVoyageSelected ? 'selected' : ''}`}
-      onClick={onSelectVoyage}
-      onKeyDown={(e) => activateOnEnterOrSpace(e, onSelectVoyage)}
     >
-      <span onClick={onToggle}>{chev(open)}</span>
-      <span className="tree-icon" aria-hidden="true">⚓</span>
-      <span className="flex-1 truncate">{voyageRouteLabel(entry)}</span>
-      {entry.ended && (
-        <span
-          className="text-[0.55rem] font-bold px-1.5 py-0.5 rounded"
-          style={END_BADGE_STYLE}
-          title="Voyage ended"
-        >
-          END
-        </span>
-      )}
+      <div
+        className={`tree-node ${isVoyageSelected ? 'selected' : ''}`}
+        onClick={onSelectVoyage}
+        onKeyDown={(e) => activateOnEnterOrSpace(e, onSelectVoyage)}
+      >
+        <span onClick={onToggle}>{chev(open)}</span>
+        <span className="tree-icon" aria-hidden="true">⚓</span>
+        <span className="flex-1 truncate">{voyageRouteLabel(entry)}</span>
+        {entry.ended && (
+          <span
+            className="text-[0.55rem] font-bold px-1.5 py-0.5 rounded"
+            style={END_BADGE_STYLE}
+            title="Voyage ended"
+          >
+            END
+          </span>
+        )}
+      </div>
 
       {open && (
-        <div className="ml-4 pl-2 border-l" role="group" style={BORDER_SUBTLE_STYLE} onClick={(e) => e.stopPropagation()}>
+        <div className="ml-4 pl-2 border-l" role="group" style={BORDER_SUBTLE_STYLE}>
           {!v ? (
             <div className="tree-node" style={LOADING_STYLE}>
               {spacer()}
