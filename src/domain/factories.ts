@@ -49,12 +49,12 @@ export function createPhase(shipClass: ShipClass, type: string, name = ''): Phas
   };
 }
 
-export function defaultDeparturePhases(shipClass: ShipClass): Phase[] {
+function defaultDeparturePhases(shipClass: ShipClass): Phase[] {
   const tpl = shipClass.phaseTemplates?.departure ?? [];
   return tpl.map((p) => createPhase(shipClass, p.type, p.name));
 }
 
-export function defaultArrivalPhases(shipClass: ShipClass): Phase[] {
+function defaultArrivalPhases(shipClass: ShipClass): Phase[] {
   const tpl = shipClass.phaseTemplates?.arrival ?? [];
   return tpl.map((p) => createPhase(shipClass, p.type, p.name));
 }

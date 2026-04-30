@@ -4,6 +4,7 @@
 
 import type {
   Phase,
+  ReportKind,
   Voyage,
   VoyageManifestEntry,
 } from '../types/domain';
@@ -34,8 +35,6 @@ export function manifestEntryFrom(voyage: Voyage): VoyageManifestEntry {
     ended: !!voyage.voyageEnd,
   };
 }
-
-export type ReportKind = 'departure' | 'arrival';
 
 export interface PhaseSource {
   filename: string;

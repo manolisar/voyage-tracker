@@ -23,7 +23,10 @@ import { StaleFileModal } from '../modals/StaleFileModal';
 import { ImportCountersModal } from '../modals/ImportCountersModal';
 import { HelpModal } from '../modals/HelpModal';
 import { Eye } from '../Icons';
+import { createLogger } from '../../util/log';
 import type { Ship, ShipClass, Voyage } from '../../types/domain';
+
+const log = createLogger('AppShell');
 
 export function AppShell() {
   const { shipId, editMode, enterEditMode } = useSession();
@@ -52,7 +55,7 @@ export function AppShell() {
           if (alive) setShipClass(cls);
         }
       } catch (e) {
-        console.error('Failed to load ship/class', e);
+        log.error('Failed to load ship/class', e);
       }
     })();
     return () => {
@@ -214,13 +217,13 @@ function AppShellInner({
         )}
 
         <div className="flex flex-1 min-h-0">
-          <aside
+          <nav
             className="border-r overflow-hidden shrink-0 hidden md:flex flex-col"
             style={sidebarStyle}
             aria-label="Voyages"
           >
             {sidebarOpen && <VoyageTree />}
-          </aside>
+          </nav>
 
           <main id="main-content" className="flex-1 min-h-0 overflow-y-auto p-6 md:p-8" tabIndex={-1}>
             <DetailPane
@@ -332,7 +335,7 @@ function NewVoyageFlow({
         return;
       }
     } catch (e) {
-      console.warn('[NewVoyageFlow] failed to load previous voyage', e);
+      log.warn('NewVoyageFlow: failed to load previous voyage', e);
     }
     // Fall back to fresh first-leg if loading the previous voyage fails.
     setPendingFirstLeg({ filename: createdFilename });

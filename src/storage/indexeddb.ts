@@ -26,6 +26,9 @@
 
 import type { FuelKey, PortRef, Voyage } from '../types/domain';
 import type { EditorRole } from '../domain/constants';
+import { createLogger } from '../util/log';
+
+const log = createLogger('idb');
 
 const DB_NAME = 'VoyageTrackerV7';
 const DB_VERSION = 5;
@@ -173,14 +176,14 @@ export async function safePutDraft(shipId: string, filename: string, voyage: Voy
   try {
     await putDraft(shipId, filename, voyage);
   } catch (e) {
-    console.warn('[idb] putDraft failed', e);
+    log.warn('putDraft failed', e);
   }
 }
 export async function safeDeleteDraft(shipId: string, filename: string): Promise<void> {
   try {
     await deleteDraft(shipId, filename);
   } catch (e) {
-    console.warn('[idb] deleteDraft failed', e);
+    log.warn('deleteDraft failed', e);
   }
 }
 

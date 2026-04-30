@@ -14,7 +14,10 @@ import { createPortal } from 'react-dom';
 import { useSession } from '../../hooks/useSession';
 import { loadPorts } from '../../domain/ports';
 import { getCustomPorts, addCustomPort } from '../../storage/indexeddb';
+import { createLogger } from '../../util/log';
 import type { PortRef } from '../../types/domain';
+
+const log = createLogger('PortCombobox');
 
 const CODE_RE = /^[A-Z]{3}$/;
 const COUNTRY_RE = /^[A-Z]{2}$/;
@@ -220,7 +223,7 @@ export function PortCombobox({
       try {
         await addCustomPort(shipId, port);
       } catch (err) {
-        console.warn('[PortCombobox] addCustomPort failed', err);
+        log.warn('addCustomPort failed', err);
       }
     }
     setCustoms((prev) => [port, ...prev.filter((p) => p.code !== code)]);

@@ -382,7 +382,7 @@ h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Manrope', sans-serif; }
   cursor: pointer;
 }
 .toast-success { background: var(--color-mgo); color: white; }
-.toast-error   { background: #DC2626; color: white; }
+.toast-error   { background: var(--color-error-fg); color: white; }
 .toast-warning { background: var(--color-hfo-band); color: white; }
 .toast-info    { background: var(--color-ocean-500); color: white; }
 

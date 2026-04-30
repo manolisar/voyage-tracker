@@ -12,6 +12,9 @@ import { getHandleForShip } from './fsHandle';
 import { StaleFileError } from './errors';
 import { ensureSafeFilename } from './safeFilename';
 import type { PortRef, Voyage, VoyageManifestEntry } from '../../types/domain';
+import { createLogger } from '../../util/log';
+
+const log = createLogger('local/voyages');
 
 // Filename safety lives in ./safeFilename.ts — re-export so existing imports
 // (used by tests and a couple of helpers) keep working without a churn pass.
@@ -167,7 +170,7 @@ export async function listVoyages(shipId: string): Promise<VoyageManifestEntry[]
       // A single corrupt file shouldn't kill the manifest. Surface it with
       // a placeholder entry so the tree can still list it; load-time errors
       // will re-surface when the user tries to open it.
-      console.warn(`[local/voyages] Failed to parse ${name}:`, e);
+      log.warn(`Failed to parse ${name}:`, e);
       manifest.push({
         filename: name,
         id: name as unknown as number,
@@ -275,18 +278,3 @@ export async function deleteVoyage(shipId: string, filename: string): Promise<vo
   }
 }
 
-/**
- * upsertIndex is a no-op on the local adapter.
- *
- * The github adapter wrote `_index.json` because listing a repo directory
- * via the Contents API is slow; on a local/SMB share `dir.entries()` is
- * fast enough that we always re-scan instead. Keeping the export so call-
- * sites in VoyageStoreProvider don't need to branch on backend.
- */
-export async function upsertShipIndex(
-  _shipId: string,
-  _filename: string,
-  _entry: unknown,
-): Promise<void> {
-  /* no-op */
-}

@@ -271,10 +271,9 @@ Voyage_Tracker_v7/
 │   │   ├── ui/                         # PortCombobox, FloatingCarryOverButton, etc.
 │   │   └── Icons.jsx
 │   ├── styles/
-│   │   ├── app.css
-│   │   └── tree.css
-│   ├── App.jsx
-│   └── main.jsx
+│   │   └── app.css
+│   ├── App.tsx
+│   └── main.tsx
 └── .github/workflows/deploy.yml
 ```
 

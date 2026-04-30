@@ -21,7 +21,6 @@ import {
   loadVoyage,
   saveVoyage,
   deleteVoyage,
-  upsertShipIndex,
 } from './voyages';
 import type { StorageAdapter } from '../adapter';
 import type { Voyage } from '../../types/domain';
@@ -54,10 +53,6 @@ export function createLocalAdapter({
     },
 
     deleteVoyage: (shipId, filename) => deleteVoyage(shipId, filename),
-
-    // No-op on local (see voyages.ts). Kept so VoyageStoreProvider call-sites
-    // don't need to branch on backend.
-    upsertIndex: (shipId, filename, entry) => upsertShipIndex(shipId, filename, entry),
   };
 }
 

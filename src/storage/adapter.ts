@@ -17,7 +17,6 @@ export interface StorageAdapter {
     prevMtime?: number | null,
   ): Promise<{ mtime: number }>;
   deleteVoyage(shipId: string, filename: string): Promise<void>;
-  upsertIndex(shipId: string, filename: string, entry: VoyageManifestEntry): Promise<void>;
 }
 
 let current: StorageAdapter | null = null;

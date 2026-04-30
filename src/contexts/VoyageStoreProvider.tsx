@@ -30,7 +30,11 @@ import {
   getStorageAdapter,
   setStorageAdapter,
 } from '../storage/adapter';
+import { StaleFileError } from '../storage/local/errors';
 import { createLocalAdapter } from '../storage/local';
+import { createLogger } from '../util/log';
+
+const log = createLogger('VoyageStore');
 import {
   safePutDraft,
   safeDeleteDraft,
@@ -264,33 +268,26 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
               (b.startDate || '').localeCompare(a.startDate || ''),
             );
           });
-          const upsert = getStorageAdapter().upsertIndex;
-          if (typeof upsert === 'function') {
-            upsert(shipId, filename, freshEntry).catch((err) =>
-              console.warn('[VoyageStore] _index upsert failed (non-fatal)', err),
-            );
-          }
         }
       } catch (e) {
-        if (e instanceof ConflictError) {
-          // Stale-file case. StaleFileError carries the on-disk voyage+mtime so
-          // we can skip an extra read when the user picks Reload.
-          const stale = e as ConflictError & {
-            currentVoyage?: unknown;
-            currentMtime?: number | null;
-          };
+        if (e instanceof StaleFileError) {
+          // Stale-file case. StaleFileError carries the on-disk voyage+mtime
+          // so we can skip an extra read when the user picks Reload.
           setConflict({
             filename,
-            currentVoyage: stale.currentVoyage ?? null,
-            currentMtime: stale.currentMtime ?? null,
+            currentVoyage: e.currentVoyage ?? null,
+            currentMtime: e.currentMtime ?? null,
           });
+        } else if (e instanceof ConflictError) {
+          // Other ConflictError shapes (none today, but future-proof).
+          setConflict({ filename, currentVoyage: null, currentMtime: null });
         } else {
           // Network drive unreachable / IO error: keep the draft in IDB so a
           // refresh doesn't lose work, then log and surface a toast. Only the
           // first failure per outage pops the toast, so a burst of retries
           // doesn't spam the user.
           safePutDraft(shipId, filename, draft);
-          console.error('[VoyageStore] save failed', filename, e);
+          log.error('save failed', filename, e);
           if (!offlineNotifiedRef.current) {
             offlineNotifiedRef.current = true;
             addToast(
@@ -441,12 +438,6 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
           (b.startDate || '').localeCompare(a.startDate || ''),
         );
       });
-      const upsert = getStorageAdapter().upsertIndex;
-      if (typeof upsert === 'function') {
-        upsert(shipId, filename, entry).catch((err) =>
-          console.warn('[VoyageStore] _index upsert failed (non-fatal)', err),
-        );
-      }
 
       setExpanded((prev) => {
         const next = new Set(prev);

@@ -206,7 +206,7 @@ export function SignalFlagWord({ text, size = 56, spaceWidth = 18 }: SignalFlagW
     }
     const Flag = FLAG_BY_LETTER[ch.toUpperCase()];
     if (!Flag) {
-      console.warn(`[SignalFlagWord] no flag defined for "${ch}"`);
+      // Decorative — silently skip unmapped chars rather than spamming.
       continue;
     }
     items.push(

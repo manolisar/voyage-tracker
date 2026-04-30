@@ -30,7 +30,7 @@ export function TopBar({
 
   return (
     <header
-      className="flex items-center gap-3 px-4 h-14 border-b shrink-0 topbar-legacy"
+      className="flex items-center gap-3 px-4 h-14 border-b shrink-0"
       style={{
         background: 'var(--color-surface)',
         borderColor: 'var(--color-border-subtle)',

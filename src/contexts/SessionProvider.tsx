@@ -30,6 +30,7 @@ import {
   getSession as idbGetSession,
   putSession as idbPutSession,
 } from '../storage/indexeddb';
+import { createLogger } from '../util/log';
 import {
   SessionContext,
   type SessionContextValue,
@@ -37,6 +38,7 @@ import {
   type StartSessionInput,
 } from './SessionContext';
 
+const log = createLogger('session');
 const VALID_ROLES = new Set<string>(Object.values(EDITOR_ROLES));
 
 function isEditorRole(role: unknown): role is EditorRole {
@@ -68,7 +70,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           setRole(isEditorRole(stored.role) ? stored.role : null);
         }
       } catch (e) {
-        console.warn('[session] hydrate failed', e);
+        log.warn('hydrate failed', e);
       } finally {
         if (!cancelled) {
           hydratedRef.current = true;
@@ -86,11 +88,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (!hydratedRef.current) return;
     const hasSession = shipId && userName && role;
     if (!hasSession) {
-      void idbClearSession().catch((e) => console.warn('[session] clear failed', e));
+      void idbClearSession().catch((e) => log.warn('clear failed', e));
       return;
     }
     void idbPutSession({ shipId, userName, role }).catch((e) =>
-      console.warn('[session] put failed', e),
+      log.warn('put failed', e),
     );
   }, [shipId, userName, role]);
 

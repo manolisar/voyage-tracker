@@ -28,7 +28,10 @@ import {
   getHandleForShip,
 } from '../../storage/local/fsHandle';
 import { Anchor } from '../Icons';
+import { createLogger } from '../../util/log';
 import type { Ship } from '../../types/domain';
+
+const landingLog = createLogger('landing');
 
 const STEP_SHIP = 0;
 const STEP_IDENTIFY = 1;
@@ -117,7 +120,7 @@ export function LandingScreen() {
       await pickDirectoryForShip(shipId);
       setFolderState({ status: 'ready', error: null });
     } catch (e) {
-      console.error('[landing] pick-folder failed', e);
+      landingLog.error('pick-folder failed', e);
       const err = e as Error;
       const msg = err?.name === 'AbortError'
         ? 'Folder picker was cancelled or blocked. Please try again.'
@@ -136,7 +139,7 @@ export function LandingScreen() {
       await getHandleForShip(shipId, { prompt: true });
       setFolderState({ status: 'ready', error: null });
     } catch (e) {
-      console.error('[landing] reconnect failed', e);
+      landingLog.error('reconnect failed', e);
       const err = e as Error;
       const msg = err?.name === 'AbortError'
         ? 'Reconnect was cancelled or blocked. Please try again.'
@@ -470,8 +473,7 @@ function FolderStatusView({ state, busy, shipName, onPick, onReconnect }: Folder
   }
   if (state.status === 'ready') {
     return (
-      <div className="p-3 rounded-lg text-sm"
-        style={{ background: 'var(--color-mgo-band, #ecfdf5)', color: 'var(--color-mgo, #065f46)' }}>
+      <div className="notice success">
         <strong>Folder connected.</strong> Voyage files will read/write here.
         <span className="block text-[0.7rem] mt-1 opacity-80">Use "Change folder" later from Settings to switch.</span>
       </div>

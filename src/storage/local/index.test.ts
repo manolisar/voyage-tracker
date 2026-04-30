@@ -49,7 +49,6 @@ describe('createLocalAdapter', () => {
     expect(typeof a.loadVoyage).toBe('function');
     expect(typeof a.saveVoyage).toBe('function');
     expect(typeof a.deleteVoyage).toBe('function');
-    expect(typeof a.upsertIndex).toBe('function');
   });
 
   it('reads session lazily via getSession (so adapter sees fresh user/role)', () => {
