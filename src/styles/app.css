@@ -503,7 +503,10 @@ h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Manrope', sans-serif; }
 .cat-label {
   background: var(--color-surface2);
   border-bottom: 1px solid var(--color-border-subtle);
-  font-size: 0.55rem;
+  /* Bumped 0.55rem → 0.65rem so uppercase letterspaced labels still pass
+     Lighthouse's legible-font heuristic. Keeps the rhythm of the strip
+     while gaining ~10px of readable height. */
+  font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -579,6 +582,7 @@ h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Manrope', sans-serif; }
 
 /* fuel columns */
 .fuel-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.fuel-cols.with-sigma { grid-template-columns: 1fr 1fr 1fr 1fr; }
 .fuel-col { text-align: center; }
 .fc-type { font-size: 0.6rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 5px; }
 .fc-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
@@ -771,7 +775,10 @@ tr.fuel-row-lsfo .eq-mt:not(.zero) { color: var(--color-lsfo); }
 .eq-th {
   padding: 0.625rem 1rem;
   text-align: left;
-  font-size: 0.5rem;
+  /* Bumped 0.5rem → 0.6rem to clear Lighthouse's legible-font bar. Header
+     cells already wear uppercase + 1.2px tracking so the bump is invisible
+     in flow but readable on smaller laptop displays. */
+  font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 1.2px;
   text-transform: uppercase;

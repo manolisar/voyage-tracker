@@ -44,9 +44,10 @@ export function StaleFileModal({
         ref={dialogRef}
         className="modal-content w-full max-w-lg"
         onClick={(e) => e.stopPropagation()}
-        role="dialog"
+        role="alertdialog"
         aria-modal="true"
         aria-labelledby="stale-file-title"
+        aria-describedby="stale-file-desc"
       >
         <div
           className="modal-head flex items-start justify-between"
@@ -56,7 +57,7 @@ export function StaleFileModal({
             <Cloud className="w-6 h-6 mt-0.5 shrink-0" />
             <div>
               <h2 id="stale-file-title" ref={headingRef} tabIndex={-1} style={{ color: 'inherit', outline: 'none' }}>File changed on disk</h2>
-              <p style={{ color: 'inherit', opacity: 0.85 }}>
+              <p id="stale-file-desc" style={{ color: 'inherit', opacity: 0.85 }}>
                 Another crew member saved <strong>{voyageLabel || filename}</strong> in the shared folder while you were editing.
               </p>
             </div>

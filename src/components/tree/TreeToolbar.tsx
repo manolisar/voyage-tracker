@@ -41,7 +41,7 @@ export function TreeToolbar() {
       </div>
       <div className="flex items-center gap-1">
         <div
-          role="tablist"
+          role="group"
           aria-label="Voyage filter"
           className="flex rounded-lg p-0.5 text-[0.65rem] font-bold"
           style={{ background: 'var(--color-surface2)' }}
@@ -51,8 +51,8 @@ export function TreeToolbar() {
             return (
               <button
                 key={f.id}
-                role="tab"
-                aria-selected={active}
+                type="button"
+                aria-pressed={active}
                 onClick={() => setFilter(f.id)}
                 className="px-2 py-1 rounded-md transition-colors"
                 style={{

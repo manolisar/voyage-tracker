@@ -147,7 +147,7 @@ export function VoyageDetail({
             </span>
           </div>
           <div className="cat-body">
-            <div className="fuel-cols">
+            <div className="fuel-cols with-sigma">
               {FUEL_COLS.map(({ key, label }) => (
                 <div key={key} className={`fuel-col ${key}`}>
                   <div className="fc-type"><span className="fc-dot" />{label}</div>
@@ -155,6 +155,17 @@ export function VoyageDetail({
                   <div className="fc-rob">ROB {rob?.[key] ? `${rob[key]} MT` : '—'}</div>
                 </div>
               ))}
+              <div className="fuel-col fuel-col-sigma">
+                <div className="fc-type">Σ Total</div>
+                <div className="fc-big">
+                  {formatMT(
+                    (Number(totals.hfo) || 0)
+                    + (Number(totals.mgo) || 0)
+                    + (Number(totals.lsfo) || 0),
+                  )}
+                </div>
+                <div className="fc-rob">all fuels</div>
+              </div>
             </div>
           </div>
         </div>

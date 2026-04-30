@@ -370,7 +370,24 @@ function LegReportTabs({ voyage, leg, activeKind, onSelect, children }: LegRepor
             </div>
           </div>
         </div>
-        <div className="px-5 pb-3 flex gap-2 overflow-x-auto" role="tablist" aria-label="Leg reports">
+        <div
+          className="px-5 pb-3 flex gap-2 overflow-x-auto"
+          role="tablist"
+          aria-label="Leg reports"
+          onKeyDown={(e) => {
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight'
+                && e.key !== 'Home' && e.key !== 'End') return;
+            e.preventDefault();
+            const idx = LEG_REPORT_KINDS.indexOf(activeKind);
+            if (idx < 0) return;
+            const last = LEG_REPORT_KINDS.length - 1;
+            const next =
+              e.key === 'ArrowLeft' ? Math.max(0, idx - 1) :
+              e.key === 'ArrowRight' ? Math.min(last, idx + 1) :
+              e.key === 'Home' ? 0 : last;
+            onSelect(LEG_REPORT_KINDS[next]);
+          }}
+        >
           {LEG_REPORT_KINDS.map((kind) => {
             const active = kind === activeKind;
             return (
@@ -379,6 +396,7 @@ function LegReportTabs({ voyage, leg, activeKind, onSelect, children }: LegRepor
                 type="button"
                 role="tab"
                 aria-selected={active}
+                tabIndex={active ? 0 : -1}
                 className={active ? 'btn-primary px-3 py-1.5 rounded-lg text-xs' : 'btn-flat px-3 py-1.5 rounded-lg text-xs'}
                 onClick={() => onSelect(kind)}
               >
