@@ -267,7 +267,7 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
                   Default fuel densities
                 </div>
                 <div className="text-xs mt-0.5" style={{ color: 'var(--color-dim)' }}>
-                  t/m³ @ Counters — applied to new voyages on this ship. Existing voyages keep their own densities.
+                  kg/L @ Counters — applied to new voyages on this ship. Existing voyages keep their own densities.
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-3">
                   {(Object.keys(baseline) as FuelKey[]).map((fuel) => (

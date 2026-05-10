@@ -1,13 +1,13 @@
 // EquipmentRow — one tr per equipment item.
 // v7 refactor: takes a `def` from shipClass.equipment so allowedFuels / locked /
-// label / category are all data-driven. Counter inputs in m³, MT computed from
-// per-voyage densities.
+// label / category are all data-driven. Counter inputs in litres; MT computed
+// as (Δlitres × density) / 1000 using per-voyage densities.
 //
 // Two row-level UX affordances:
 //   • Copy-from-start arrow — small "→" button beside the END input, visible
-//     only when END is empty AND START has a numeric value. Clicking sets
-//     end := start, i.e. "engine didn't move during this phase". Hidden in
-//     read-only or disabled rows.
+//     whenever START has a numeric value (in edit mode). Clicking sets
+//     end := start, i.e. "engine didn't move during this phase". Overwrites
+//     END if it already had a value. Hidden in read-only or disabled rows.
 //   • Negative-consumption flag — when end < start (likely a mistyped
 //     counter), the MT cell renders the raw negative value in bold red so
 //     the chief can spot the typo at a glance. The voyage / phase totals
@@ -49,7 +49,12 @@ export function EquipmentRow({
   const bothNumeric = startNumeric && endNumeric;
 
   const consumption = calcConsumption(data.start, data.end, data.fuel, densities);
-  const diff = bothNumeric ? (endNum - startNum).toFixed(1) : '–';
+  const diff = bothNumeric
+    ? (endNum - startNum).toLocaleString('en-US', {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      })
+    : '–';
 
   // Negative-diff display: calcConsumption returns null when end < start
   // (so totals skip it). We still want the row's MT cell to flag the typo
@@ -68,11 +73,10 @@ export function EquipmentRow({
   const rowClass = FUEL_ROW_CLASS[data.fuel] || '';
   const fuelLower = FUEL_LOWER[data.fuel] || 'hfo';
 
-  // Show the "copy start → end" arrow only when END is empty AND START has a
-  // valid numeric value AND the row is editable. Prevents accidentally
-  // clobbering a typed reading.
-  const canCopyStartToEnd =
-    !readOnly && !disabled && startNumeric && (data.end === '' || data.end == null);
+  // Show the "copy start → end" arrow whenever the row is editable AND START
+  // has a valid numeric value. Visible regardless of END's state so the chief
+  // can re-copy at any time; clicking overwrites END.
+  const canCopyStartToEnd = !readOnly && !disabled && startNumeric;
 
   // In read-only mode start/end render as plain monospace text so the row
   // keeps the same tint, layout, widths, and column alignment as edit mode.
@@ -114,7 +118,7 @@ export function EquipmentRow({
           <div
             className="w-full px-3 py-2 rounded-lg text-sm font-mono"
             style={readonlyCellStyle}
-            aria-label={`${def?.label} start (m³)`}
+            aria-label={`${def?.label} start (L)`}
           >
             {data.start === '' || data.start == null ? '—' : data.start}
           </div>
@@ -131,7 +135,7 @@ export function EquipmentRow({
               color: 'var(--color-text)',
             }}
             placeholder="0.0"
-            aria-label={`${def?.label} start (m³)`}
+            aria-label={`${def?.label} start (L)`}
           />
         )}
       </td>
@@ -140,7 +144,7 @@ export function EquipmentRow({
           <div
             className="w-full px-3 py-2 rounded-lg text-sm font-mono"
             style={readonlyCellStyle}
-            aria-label={`${def?.label} end (m³)`}
+            aria-label={`${def?.label} end (L)`}
           >
             {data.end === '' || data.end == null ? '—' : data.end}
           </div>
@@ -179,7 +183,7 @@ export function EquipmentRow({
                 color: 'var(--color-text)',
               }}
               placeholder="0.0"
-              aria-label={`${def?.label} end (m³)`}
+              aria-label={`${def?.label} end (L)`}
             />
           </div>
         )}

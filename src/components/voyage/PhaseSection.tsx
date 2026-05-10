@@ -154,8 +154,8 @@ export function PhaseSection({
             <tr>
               <th scope="col" className="eq-th w-28">Equipment</th>
               <th scope="col" className="eq-th w-24">Fuel</th>
-              <th scope="col" className="eq-th eq-th-mono w-32">Start (m³)</th>
-              <th scope="col" className="eq-th eq-th-mono w-32">End (m³)</th>
+              <th scope="col" className="eq-th eq-th-mono w-32">Start (L)</th>
+              <th scope="col" className="eq-th eq-th-mono w-32">End (L)</th>
               <th scope="col" className="eq-th eq-th-right eq-th-mono w-24">Diff</th>
               <th scope="col" className="eq-th eq-th-right eq-th-mono w-24">MT</th>
             </tr>

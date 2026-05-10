@@ -1,25 +1,30 @@
 // FloatingCarryOverButton — bottom-right FAB that opens ManualCarryOverModal.
-// Enabled only when `lastEditedPhase` is set (i.e. the user has changed an
-// equipment END value since the last carry-over). Label echoes the source
-// phase name so it's clear what's being carried.
+// Source phase is either the most-recently-edited phase OR (fallback) the last
+// viable phase in the current view supplied via `sourceOverride`. Label echoes
+// the source phase name so it's clear what's being carried.
 
 import { useVoyageStore } from '../../hooks/useVoyageStore';
+import type { PhaseSource } from '../../contexts/voyageStore.helpers';
 
 interface Props {
   onClick: () => void;
+  // Fallback source from the current view; used when no phase has been edited
+  // this session.
+  sourceOverride?: PhaseSource | null;
 }
 
-export function FloatingCarryOverButton({ onClick }: Props) {
+export function FloatingCarryOverButton({ onClick, sourceOverride }: Props) {
   const { lastEditedPhase, findNextPhaseFor } = useVoyageStore();
-  const hasSource = !!lastEditedPhase;
-  const target = hasSource ? findNextPhaseFor(lastEditedPhase) : null;
+  const source = lastEditedPhase ?? sourceOverride ?? null;
+  const hasSource = !!source;
+  const target = hasSource ? findNextPhaseFor(source) : null;
   const enabled = hasSource && !!target;
 
   const title = enabled
-    ? `Carry Over — from: ${lastEditedPhase!.phaseName || 'phase'} → ${target!.phaseName || 'next phase'}`
+    ? `Carry Over — from: ${source!.phaseName || 'phase'} → ${target!.phaseName || 'next phase'}`
     : hasSource
       ? 'No next phase to carry into'
-      : 'Edit END values first to enable carry-over';
+      : 'No phase data available to carry over';
 
   return (
     <button
@@ -44,10 +49,10 @@ export function FloatingCarryOverButton({ onClick }: Props) {
         <span>Carry Over</span>
         <span className="text-[0.62rem] font-normal" style={{ opacity: 0.85 }}>
           {enabled
-            ? `from: ${lastEditedPhase!.phaseName || 'phase'}`
+            ? `from: ${source!.phaseName || 'phase'}`
             : hasSource
               ? 'no next phase'
-              : 'edit END values first'}
+              : 'no phase data'}
         </span>
       </span>
     </button>

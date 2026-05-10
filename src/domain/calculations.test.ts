@@ -12,32 +12,32 @@ import type { Phase, ShipClass, Voyage } from '../types/domain';
 const solsticeClass = solsticeClassRaw as unknown as ShipClass;
 
 describe('calcConsumption', () => {
-  it('computes MT from m³ × density', () => {
-    expect(calcConsumption('100', '105', 'HFO', { HFO: 0.92 })).toBeCloseTo(4.6, 2);
+  it('computes MT from (Δlitres × density) / 1000', () => {
+    expect(calcConsumption('100000', '105000', 'HFO', { HFO: 0.92 })).toBeCloseTo(4.6, 2);
   });
 
   it('normalizes lowercase fuel keys', () => {
-    expect(calcConsumption('100', '105', 'hfo', { HFO: 0.92 })).toBeCloseTo(4.6, 2);
+    expect(calcConsumption('100000', '105000', 'hfo', { HFO: 0.92 })).toBeCloseTo(4.6, 2);
   });
 
   it('returns null on missing inputs', () => {
-    expect(calcConsumption('', '105', 'HFO', { HFO: 0.92 })).toBeNull();
-    expect(calcConsumption('100', '', 'HFO', { HFO: 0.92 })).toBeNull();
-    expect(calcConsumption(null, '105', 'HFO', { HFO: 0.92 })).toBeNull();
-    expect(calcConsumption('100', null, 'HFO', { HFO: 0.92 })).toBeNull();
+    expect(calcConsumption('', '105000', 'HFO', { HFO: 0.92 })).toBeNull();
+    expect(calcConsumption('100000', '', 'HFO', { HFO: 0.92 })).toBeNull();
+    expect(calcConsumption(null, '105000', 'HFO', { HFO: 0.92 })).toBeNull();
+    expect(calcConsumption('100000', null, 'HFO', { HFO: 0.92 })).toBeNull();
   });
 
   it('returns null on negative diff', () => {
-    expect(calcConsumption('105', '100', 'HFO', { HFO: 0.92 })).toBeNull();
+    expect(calcConsumption('105000', '100000', 'HFO', { HFO: 0.92 })).toBeNull();
   });
 
   it('returns null when density for the requested fuel is missing', () => {
-    expect(calcConsumption('100', '105', 'HFO', { MGO: 0.83 })).toBeNull();
+    expect(calcConsumption('100000', '105000', 'HFO', { MGO: 0.83 })).toBeNull();
   });
 
   it('returns null on non-numeric inputs', () => {
-    expect(calcConsumption('abc', '105', 'HFO', { HFO: 0.92 })).toBeNull();
-    expect(calcConsumption('100', 'xyz', 'HFO', { HFO: 0.92 })).toBeNull();
+    expect(calcConsumption('abc', '105000', 'HFO', { HFO: 0.92 })).toBeNull();
+    expect(calcConsumption('100000', 'xyz', 'HFO', { HFO: 0.92 })).toBeNull();
   });
 });
 
@@ -65,8 +65,8 @@ describe('calcVoyageTotals', () => {
             phases: [
               {
                 equipment: {
-                  dg12: { start: '100', end: '105', fuel: 'HFO' }, // 5 × 0.92 = 4.60
-                  dg3:  { start: '50',  end: '52',  fuel: 'MGO' }, // 2 × 0.83 = 1.66
+                  dg12: { start: '100000', end: '105000', fuel: 'HFO' }, // 5000 L × 0.92 / 1000 = 4.60
+                  dg3:  { start: '50000',  end: '52000',  fuel: 'MGO' }, // 2000 L × 0.83 / 1000 = 1.66
                 },
               },
             ],
@@ -75,7 +75,7 @@ describe('calcVoyageTotals', () => {
             phases: [
               {
                 equipment: {
-                  dg12: { start: '200', end: '210', fuel: 'LSFO' }, // 10 × 0.92 = 9.20
+                  dg12: { start: '200000', end: '210000', fuel: 'LSFO' }, // 10000 L × 0.92 / 1000 = 9.20
                 },
               },
             ],
@@ -101,14 +101,14 @@ describe('calcVoyageTotals', () => {
       legs: [
         {
           departure: {
-            phases: [{ equipment: { dg12: { start: '0', end: '10', fuel: 'HFO' } } }],
+            phases: [{ equipment: { dg12: { start: '0', end: '10000', fuel: 'HFO' } } }],
           },
           arrival: { phases: [] },
         },
       ],
     };
     const totals = calcVoyageTotals(voyage as unknown as Voyage, solsticeClass);
-    expect(totals.hfo).toBeCloseTo(9.2, 2); // 10 × 0.92
+    expect(totals.hfo).toBeCloseTo(9.2, 2); // 10000 L × 0.92 / 1000
   });
 
   it('skips equipment rows with incomplete inputs without crashing', () => {
@@ -121,7 +121,7 @@ describe('calcVoyageTotals', () => {
               {
                 equipment: {
                   dg12: { start: '', end: '', fuel: 'HFO' },
-                  dg4:  { start: '0', end: '5', fuel: 'HFO' },
+                  dg4:  { start: '0', end: '5000', fuel: 'HFO' },
                 },
               },
             ],
@@ -172,8 +172,8 @@ describe('calcPhaseTotals', () => {
   it('sums consumption for a single phase, by fuel', () => {
     const phase = {
       equipment: {
-        dg12: { start: '0', end: '10', fuel: 'HFO' }, // 9.20
-        dg3:  { start: '0', end: '5',  fuel: 'MGO' }, // 4.15
+        dg12: { start: '0', end: '10000', fuel: 'HFO' }, // 10000 × 0.92 / 1000 = 9.20
+        dg3:  { start: '0', end: '5000',  fuel: 'MGO' }, // 5000 × 0.83 / 1000 = 4.15
       },
     };
     const totals = calcPhaseTotals(phase as unknown as Phase, { HFO: 0.92, MGO: 0.83 });

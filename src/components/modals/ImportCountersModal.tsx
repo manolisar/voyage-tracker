@@ -272,7 +272,7 @@ export function ImportCountersModal({
                     {hasValue ? (
                       <>
                         <div className="font-mono font-bold text-[0.82rem]" style={{ color: 'var(--color-text)' }}>
-                          {formatNumber(value)} m³
+                          {formatNumber(value)} L
                         </div>
                         {!selected[def.key] && (
                           <div
