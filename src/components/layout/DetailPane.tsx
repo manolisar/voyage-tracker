@@ -33,6 +33,7 @@ import { VoyageReportSection } from '../voyage/VoyageReportSection';
 import { FloatingCarryOverButton } from '../ui/FloatingCarryOverButton';
 import { ManualCarryOverModal } from '../modals/ManualCarryOverModal';
 import type { Leg, Report, ReportKind, Ship, ShipClass, Voyage } from '../../types/domain';
+import type { PhaseSource } from '../../contexts/voyageStore.helpers';
 
 interface Props {
   ship: Ship | null | undefined;
@@ -237,6 +238,37 @@ export function DetailPane({
           </div>
         );
       }
+      // Fallback carry-over source: walk the current report's phases from the
+      // last one back, picking the first phase that has any inheritable
+      // counter value. Lets the FAB work without prior edit-tracking.
+      const sourceCandidate: PhaseSource | null = (() => {
+        const phases = report.phases || [];
+        for (let i = phases.length - 1; i >= 0; i--) {
+          const p = phases[i];
+          const equipment: Record<string, string> = {};
+          let hasAny = false;
+          for (const [k, eq] of Object.entries(p.equipment || {})) {
+            const v = inheritedCounter(eq);
+            if (v) {
+              equipment[k] = v;
+              hasAny = true;
+            }
+          }
+          if (hasAny) {
+            return {
+              filename,
+              legId: leg.id,
+              kind: activeReportKind as ReportKind,
+              phaseId: p.id,
+              phaseName:
+                p.name ||
+                (activeReportKind === 'departure' ? 'Departure Phase' : 'Arrival Phase'),
+              equipment,
+            };
+          }
+        }
+        return null;
+      })();
       return (
         <LegReportTabs
           voyage={voyage}
@@ -252,11 +284,15 @@ export function DetailPane({
               onReportChange(filename, leg.id, activeReportKind as ReportKind, newReport)
             }
           />
-          <FloatingCarryOverButton onClick={() => setCarryOverOpen(true)} />
+          <FloatingCarryOverButton
+            onClick={() => setCarryOverOpen(true)}
+            sourceOverride={sourceCandidate}
+          />
           {carryOverOpen && (
             <ManualCarryOverModal
               shipClass={shipClass}
               onClose={() => setCarryOverOpen(false)}
+              sourceOverride={sourceCandidate}
             />
           )}
         </LegReportTabs>

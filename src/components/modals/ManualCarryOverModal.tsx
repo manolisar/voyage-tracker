@@ -7,15 +7,19 @@ import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { X } from '../Icons';
 import type { EquipmentDefinition, ShipClass } from '../../types/domain';
+import type { PhaseSource } from '../../contexts/voyageStore.helpers';
 
 interface Props {
   shipClass: ShipClass | null;
   onClose: () => void;
+  // Optional fallback used when no phase has been edited this session — lets
+  // the FAB carry over from the last viable phase in the current view.
+  sourceOverride?: PhaseSource | null;
 }
 
-export function ManualCarryOverModal({ shipClass, onClose }: Props) {
+export function ManualCarryOverModal({ shipClass, onClose, sourceOverride }: Props) {
   const { lastEditedPhase, findNextPhaseFor, applyCarryOver } = useVoyageStore();
-  const source = lastEditedPhase;
+  const source = lastEditedPhase ?? sourceOverride ?? null;
   const target = source ? findNextPhaseFor(source) : null;
 
   // Start with every equipment selected; user can untick individual rows.
@@ -121,7 +125,12 @@ export function ManualCarryOverModal({ shipClass, onClose }: Props) {
                     </span>
                   </div>
                   <span className="font-mono text-[0.78rem]" style={{ color: 'var(--color-dim)' }}>
-                    {can && val ? `${parseFloat(val).toFixed(1)} m³` : '—'}
+                    {can && val
+                      ? `${parseFloat(val).toLocaleString('en-US', {
+                          minimumFractionDigits: 1,
+                          maximumFractionDigits: 1,
+                        })} L`
+                      : '—'}
                   </span>
                 </button>
               );

@@ -209,7 +209,7 @@ export function VoyageDetail({
       <section className="glass-card rounded-2xl p-5 mb-5">
         <div className="flex items-center mb-3">
           <div className="section-label">
-            Fuel Densities <span className="font-mono ml-2" style={{ color: 'var(--color-dim)' }}>t/m³ @ Counters</span>
+            Fuel Densities <span className="font-mono ml-2" style={{ color: 'var(--color-dim)' }}>kg/L @ Counters</span>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4">

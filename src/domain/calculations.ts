@@ -1,6 +1,6 @@
-// Pure consumption math. Carried over from v6 with one change:
-// fuel keys are normalized to uppercase to look up densities (which are keyed
-// by FuelKey 'HFO'/'MGO'/'LSFO') and lowercase to bucket totals.
+// Pure consumption math. Counter readings are entered in litres; MT is
+// computed as (Δlitres × density) / 1000, where density is numerically the
+// same kg/L value that's stored as t/m³ in the ship-class config.
 
 import { defaultDensities } from './shipClass';
 import type { FuelKey, Phase, ShipClass, Voyage } from '../types/domain';
@@ -15,8 +15,7 @@ export interface FuelTotals {
 type DensityMap = Partial<Record<FuelKey | string, number | string>>;
 
 // Returns numeric MT (number, not string) or null if inputs incomplete/invalid.
-// v6 returned a 2-decimal string; v7 returns the raw number so the caller picks
-// formatting. Use formatMT() below for display.
+// Inputs are in litres; density is kg/L (numerically identical to t/m³).
 export function calcConsumption(
   start: string | number | null | undefined,
   end: string | number | null | undefined,
@@ -27,14 +26,14 @@ export function calcConsumption(
   const s = parseFloat(String(start));
   const e = parseFloat(String(end));
   if (isNaN(s) || isNaN(e)) return null;
-  const diffM3 = e - s;
-  if (diffM3 < 0) return null;
+  const diffL = e - s;
+  if (diffL < 0) return null;
 
   const fuelKey = String(fuel || '').toUpperCase();
   const density = parseFloat(String(densities?.[fuelKey] ?? ''));
   if (!density || isNaN(density)) return null;
 
-  return diffM3 * density;
+  return (diffL * density) / 1000;
 }
 
 // Round MT to 2 decimals for display.
