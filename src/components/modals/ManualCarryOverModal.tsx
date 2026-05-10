@@ -3,6 +3,7 @@
 // class's equipment list instead of hardcoded DG/boiler keys.
 
 import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { X } from '../Icons';
@@ -38,6 +39,11 @@ export function ManualCarryOverModal({ shipClass, onClose, sourceOverride }: Pro
   useFocusTrap(dialogRef, { onEscape: onClose, disabled: !source || !target || !shipClass });
 
   if (!source || !target || !shipClass) return null;
+  // The FAB is mounted inside DetailPane, which AppShell wraps in
+  // `inert={anyModalOpen}`. If we render the modal in-place it lives inside
+  // that subtree and becomes inert the moment it opens — every click and key
+  // is swallowed. Portal to document.body so the modal escapes the inert
+  // wrapper, the same way other AppShell-level modals do.
 
   const hasValue = (def: EquipmentDefinition): boolean => {
     const v = source.equipment?.[def.key];
@@ -55,7 +61,7 @@ export function ManualCarryOverModal({ shipClass, onClose, sourceOverride }: Pro
     onClose();
   };
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div
         ref={dialogRef}
@@ -152,7 +158,8 @@ export function ManualCarryOverModal({ shipClass, onClose, sourceOverride }: Pro
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
