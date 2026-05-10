@@ -123,7 +123,9 @@ Nothing in the app enforces these partitions — they're workflow convention. An
 | Boiler 1  | MGO          | MGO only             | **yes** |
 | Boiler 2  | MGO          | MGO only             | **yes** |
 
-**Default densities:** HFO 0.92, MGO 0.83, LSFO 0.92 (editable per-voyage).
+**Default densities:** HFO 0.92, MGO 0.83, LSFO 0.92 kg/L (editable per-voyage). Numerically identical to t/m³ — the unit label flipped when counter inputs moved to litres.
+
+**Counter inputs are in litres.** Engine and boiler counter readings (Start / End columns) are entered in L, not m³. Mass is computed as `(Δlitres × density) / 1000` in [src/domain/calculations.ts](src/domain/calculations.ts) — see `calcConsumption`. Per-row "→" arrow on EquipmentRow copies start to end (engine idle this phase); always visible while editable. The carry-over FAB carries phase END counters (in L) into the next phase's START via [src/components/modals/ManualCarryOverModal.tsx](src/components/modals/ManualCarryOverModal.tsx) — portal'd to `document.body` so it escapes AppShell's `inert={anyModalOpen}` wrapper.
 
 **Lub-oil:** recorded **only** at End Voyage (one entry per voyage), NOT in departure/arrival reports.
 
@@ -300,4 +302,4 @@ Voyage_Tracker_v7/
 
 ---
 
-*Last updated: 2026-04-25.*
+*Last updated: 2026-05-10.*
