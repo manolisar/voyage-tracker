@@ -158,6 +158,13 @@ TopBar:  [☰] Voyage Tracker — Celebrity Solstice    [● Edit Mode | View On
   - Leg 1, 2, 3, … (selecting a leg opens the right-pane report tabs)
   - ⚑ Voyage End (only after End Voyage)
 
+**Cruise Summary aggregation (Voyage Detail pane):** Fuel totals already
+sum across legs (`calcVoyageTotals`). Fresh Water *Produced* / *Consumed*
+and Chemicals *NaOH cons* are likewise **summed** across every leg's
+arrival report — they are flow quantities. *ROB* values (fuel ROB,
+fresh-water ROB, NaOH ROB) show the **latest non-empty arrival reading**
+because they are running tank levels, not additive.
+
 **Leg report tabs:** Departure, Arrival, and Nav Report are not sidebar tree
 children. Clicking a leg routes to the first incomplete report tab in this
 order: Departure → Arrival → Nav Report, falling back to Departure when all are
