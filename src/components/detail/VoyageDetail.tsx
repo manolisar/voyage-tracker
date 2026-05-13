@@ -32,20 +32,60 @@ function lastReportRob(voyage: Voyage): Record<string, string> {
   return reports[reports.length - 1] || {};
 }
 
-function lastFreshWater(voyage: Voyage) {
-  for (let i = (voyage.legs || []).length - 1; i >= 0; i--) {
-    const fw = voyage.legs[i].arrival?.freshWater;
-    if (fw && (fw.rob || fw.production || fw.consumption)) return fw;
+function aggregateFreshWater(
+  voyage: Voyage,
+): { rob: string; production: string; consumption: string } | null {
+  // Production + consumption sum across every leg's arrival; ROB is the
+  // latest non-empty arrival value (running tank level, not additive).
+  let prod = 0;
+  let cons = 0;
+  let any = false;
+  let lastRob = '';
+  for (const leg of voyage.legs || []) {
+    const fw = leg.arrival?.freshWater;
+    if (!fw) continue;
+    if (fw.production) {
+      const n = Number(fw.production);
+      if (Number.isFinite(n)) { prod += n; any = true; }
+    }
+    if (fw.consumption) {
+      const n = Number(fw.consumption);
+      if (Number.isFinite(n)) { cons += n; any = true; }
+    }
+    if (fw.rob) { lastRob = fw.rob; any = true; }
   }
-  return null;
+  if (!any) return null;
+  const fmt = (v: number) =>
+    v ? (Number.isInteger(v) ? String(v) : v.toFixed(1)) : '';
+  return { rob: lastRob, production: fmt(prod), consumption: fmt(cons) };
 }
 
-function lastAep(voyage: Voyage) {
-  for (let i = (voyage.legs || []).length - 1; i >= 0; i--) {
-    const a = voyage.legs[i].arrival?.aep;
-    if (a && (a.alkaliCons || a.alkaliRob)) return a;
+function aggregateAep(voyage: Voyage): { alkaliCons: string; alkaliRob: string } | null {
+  // NaOH consumption sums across every leg's arrival report; ROB is the
+  // latest non-empty arrival value (a running tank level, not additive).
+  let sum = 0;
+  let any = false;
+  let lastRob = '';
+  for (const leg of voyage.legs || []) {
+    const a = leg.arrival?.aep;
+    if (!a) continue;
+    if (a.alkaliCons) {
+      const n = Number(a.alkaliCons);
+      if (Number.isFinite(n)) {
+        sum += n;
+        any = true;
+      }
+    }
+    if (a.alkaliRob) {
+      lastRob = a.alkaliRob;
+      any = true;
+    }
   }
-  return null;
+  if (!any) return null;
+  return {
+    alkaliCons: sum ? (Number.isInteger(sum) ? String(sum) : sum.toFixed(1)) : '',
+    alkaliRob: lastRob,
+  };
 }
 
 interface Props {
@@ -74,8 +114,8 @@ export function VoyageDetail({
   const totals = calcVoyageTotals(voyage, shipClass);
   const ended = !!voyage.voyageEnd;
   const rob = lastReportRob(voyage);
-  const water = lastFreshWater(voyage);
-  const aep = lastAep(voyage);
+  const water = aggregateFreshWater(voyage);
+  const aep = aggregateAep(voyage);
   const lubeOil = voyage.voyageEnd?.lubeOil || null;
 
   const filename = voyage.filename ?? '';
