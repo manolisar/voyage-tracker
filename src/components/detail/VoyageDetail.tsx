@@ -2,7 +2,7 @@
 // Cruise card (name, dates, status) + Cruise Summary cards (fuel/water/chem/lube)
 // + Densities + Legs list.
 
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import type { FocusEvent, KeyboardEvent } from 'react';
 import { calcVoyageTotals, type FuelTotals } from '../../domain/calculations';
 import { formatMT } from '../../domain/calculations';
 import { sortLegsByDate, voyageRouteLongLabel } from '../../domain/factories';
@@ -372,13 +372,12 @@ interface CruiseNameHeadingProps {
 // Chief can rename a voyage without leaving the detail pane. Save commits on
 // blur (and Enter); Escape reverts. Empty values are rejected to match the
 // "required at creation" contract — they revert to the previous name.
+//
+// The input is uncontrolled and keyed on `saved` so an external rename (e.g.
+// pulled from disk, or undone elsewhere) remounts the field with the new
+// value, avoiding a useEffect→setState round-trip.
 function CruiseNameHeading({ voyage, editMode, onSave }: CruiseNameHeadingProps) {
   const saved = voyage.cruiseName || '';
-  const [draft, setDraft] = useState(saved);
-
-  useEffect(() => {
-    setDraft(saved);
-  }, [saved]);
 
   if (!editMode) {
     return (
@@ -392,10 +391,10 @@ function CruiseNameHeading({ voyage, editMode, onSave }: CruiseNameHeadingProps)
     );
   }
 
-  const commit = () => {
-    const next = draft.trim();
+  const commit = (e: FocusEvent<HTMLInputElement>) => {
+    const next = e.currentTarget.value.trim();
     if (!next) {
-      setDraft(saved);
+      e.currentTarget.value = saved;
       return;
     }
     if (next !== saved) onSave(next);
@@ -404,21 +403,21 @@ function CruiseNameHeading({ voyage, editMode, onSave }: CruiseNameHeadingProps)
   const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      (e.currentTarget as HTMLInputElement).blur();
+      e.currentTarget.blur();
     } else if (e.key === 'Escape') {
       e.preventDefault();
-      setDraft(saved);
-      (e.currentTarget as HTMLInputElement).blur();
+      e.currentTarget.value = saved;
+      e.currentTarget.blur();
     }
   };
 
   return (
     <input
+      key={saved}
       type="text"
       className="form-input text-[1.25rem] font-extrabold tracking-tight"
       style={{ background: 'var(--color-surface2)' }}
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
+      defaultValue={saved}
       onBlur={commit}
       onKeyDown={onKey}
       placeholder="e.g. Best of Scandinavia"
