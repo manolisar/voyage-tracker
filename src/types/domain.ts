@@ -103,6 +103,7 @@ export interface Voyage {
   toPort: PortRef;
   startDate: string;
   endDate: string;
+  cruiseName: string;
   legs: Leg[];
   densities: Record<FuelKey, number>;
   voyageEnd: VoyageEnd | null;
@@ -118,6 +119,7 @@ export interface VoyageManifestEntry {
   toPort: PortRef;
   startDate: string;
   endDate: string;
+  cruiseName: string;
   ended: boolean;
 }
 

@@ -21,6 +21,7 @@ interface Props {
 
 export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
   const { createVoyage } = useVoyageStore();
+  const [cruiseName, setCruiseName] = useState('');
   const [fromPort, setFromPort] = useState<PortRef | null>(null);
   const [toPort, setToPort] = useState<PortRef | null>(null);
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -32,7 +33,14 @@ export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
 
   useFocusTrap(dialogRef, { onEscape: () => onClose(), disabled: busy });
 
-  const canSubmit = !!fromPort?.code && !!toPort?.code && !!startDate && !busy && !!shipClass && !!ship?.code;
+  const canSubmit =
+    !!cruiseName.trim()
+    && !!fromPort?.code
+    && !!toPort?.code
+    && !!startDate
+    && !busy
+    && !!shipClass
+    && !!ship?.code;
 
   async function handleCreate(e: FormEvent) {
     e?.preventDefault?.();
@@ -47,6 +55,7 @@ export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
         toPort,
         startDate,
         endDate,
+        cruiseName: cruiseName.trim(),
       });
       onClose(createdFilename);
     } catch (err) {
@@ -81,6 +90,22 @@ export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
         </div>
 
         <form className="p-5 grid grid-cols-2 gap-4" onSubmit={handleCreate}>
+          <div className="col-span-2">
+            <label className="form-label" htmlFor={`${fid}-name`}>
+              Cruise name <span style={{ color: 'var(--color-error-fg)' }}>*</span>
+            </label>
+            <input
+              id={`${fid}-name`}
+              type="text"
+              className="form-input"
+              value={cruiseName}
+              onChange={(e) => setCruiseName(e.target.value)}
+              placeholder="e.g. Best of Scandinavia"
+              disabled={busy}
+              autoFocus
+              maxLength={80}
+            />
+          </div>
           <div>
             <PortCombobox
               id="embark-port"
@@ -88,7 +113,6 @@ export function NewVoyageModal({ ship, shipClass, onClose }: Props) {
               value={fromPort}
               onChange={setFromPort}
               disabled={busy}
-              autoFocus
             />
           </div>
           <div>

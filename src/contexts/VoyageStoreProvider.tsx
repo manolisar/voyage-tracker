@@ -260,6 +260,7 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
           existing.toPort?.code !== freshEntry.toPort.code ||
           existing.startDate !== freshEntry.startDate ||
           existing.endDate !== freshEntry.endDate ||
+          existing.cruiseName !== freshEntry.cruiseName ||
           !!existing.ended !== freshEntry.ended;
         if (manifestChanged) {
           setVoyages((list) => {
@@ -400,6 +401,8 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       if (!CODE_RE.test(toPort?.code || ''))
         throw new Error('createVoyage: disembarkation port code must be 3 uppercase letters');
       if (!partial.startDate) throw new Error('createVoyage: startDate required');
+      const cruiseName = (partial.cruiseName || '').trim();
+      if (!cruiseName) throw new Error('createVoyage: cruiseName required');
 
       const filename = buildFilename(shipCode, partial.startDate, fromPort.code, toPort.code);
       if (voyagesRef.current.some((v) => v.filename === filename)) {
@@ -420,6 +423,7 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
         toPort: { ...toPort },
         startDate: partial.startDate || '',
         endDate: partial.endDate || '',
+        cruiseName,
         densities,
         filename,
         lastModified: new Date().toISOString(),

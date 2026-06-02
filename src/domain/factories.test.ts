@@ -55,6 +55,7 @@ describe('defaultVoyage', () => {
     expect(v.filename).toBeNull();
     expect(v.startDate).toBe('');
     expect(v.endDate).toBe('');
+    expect(v.cruiseName).toBe('');
   });
 
   it('returns fromPort/toPort as PortRef objects (not strings)', () => {

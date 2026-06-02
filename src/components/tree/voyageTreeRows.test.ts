@@ -9,6 +9,7 @@ const entry: VoyageManifestEntry = {
   toPort: { code: 'NAS', name: 'Nassau', country: 'BS', locode: 'BSNAS' },
   startDate: '2026-01-15',
   endDate: '',
+  cruiseName: '',
   ended: false,
 };
 

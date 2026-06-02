@@ -24,6 +24,7 @@ const LOADING_STYLE = { color: 'var(--color-faint)', cursor: 'default' as const 
 const LEG_NUM_STYLE = { color: 'var(--color-faint)' };
 const VOYAGE_DETAIL_SELECTED_STYLE = { background: 'rgba(6,182,212,0.10)' };
 const VOYAGE_DETAIL_UNSELECTED_STYLE = { background: 'transparent' };
+const VOYAGE_ROUTE_LINE_STYLE = { color: 'var(--color-dim)' };
 
 function chev(open: boolean) {
   return <span className="tree-chev" aria-hidden="true">{open ? '▾' : '▸'}</span>;
@@ -100,7 +101,18 @@ export function TreeNode({ entry }: TreeNodeProps) {
       >
         <span onClick={onToggle}>{chev(open)}</span>
         <span className="tree-icon" aria-hidden="true">⚓</span>
-        <span className="flex-1 truncate">{voyageRouteLabel(entry)}</span>
+        <div className="flex-1 min-w-0">
+          <div className="truncate">
+            {entry.startDate || '—'}
+            {entry.cruiseName ? ` · ${entry.cruiseName}` : ''}
+          </div>
+          <div
+            className="truncate text-[0.7rem]"
+            style={VOYAGE_ROUTE_LINE_STYLE}
+          >
+            {voyageRouteLabel(entry)}
+          </div>
+        </div>
         {entry.ended && (
           <span
             className="text-[0.55rem] font-bold px-1.5 py-0.5 rounded"

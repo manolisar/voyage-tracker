@@ -22,6 +22,7 @@ export interface CreateVoyageInput {
   toPort: PortRef;
   startDate: string;
   endDate?: string;
+  cruiseName: string;
 }
 
 export interface AddLegInput {

@@ -32,6 +32,7 @@ export function manifestEntryFrom(voyage: Voyage): VoyageManifestEntry {
     toPort: voyage.toPort || { ...EMPTY_PORT },
     startDate: voyage.startDate || '',
     endDate: voyage.endDate || '',
+    cruiseName: voyage.cruiseName || '',
     ended: !!voyage.voyageEnd,
   };
 }

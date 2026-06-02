@@ -2,6 +2,7 @@
 // Cruise card (name, dates, status) + Cruise Summary cards (fuel/water/chem/lube)
 // + Densities + Legs list.
 
+import { useEffect, useState, type KeyboardEvent } from 'react';
 import { calcVoyageTotals, type FuelTotals } from '../../domain/calculations';
 import { formatMT } from '../../domain/calculations';
 import { sortLegsByDate, voyageRouteLongLabel } from '../../domain/factories';
@@ -109,7 +110,7 @@ export function VoyageDetail({
   onDeleteVoyage,
   onDeleteLeg,
 }: Props) {
-  const { reopenVoyage } = useVoyageStore();
+  const { reopenVoyage, updateVoyage } = useVoyageStore();
   const toast = useToast();
   const totals = calcVoyageTotals(voyage, shipClass);
   const ended = !!voyage.voyageEnd;
@@ -129,36 +130,52 @@ export function VoyageDetail({
     <div className="max-w-5xl mx-auto">
       {/* Cruise info card */}
       <section className="glass-card rounded-2xl overflow-hidden mb-5">
-        <div className="leg-head px-5 py-4 flex items-center gap-3 flex-wrap">
-          <div className="text-[1.1rem] font-extrabold tracking-tight" style={{ color: 'var(--color-text)' }}>
-            {voyageRouteLongLabel(voyage)}
+        <div className="leg-head px-5 py-4 flex flex-col gap-2">
+          <div className="flex items-start gap-3 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <CruiseNameHeading
+                voyage={voyage}
+                editMode={editMode && !ended}
+                onSave={(name) =>
+                  updateVoyage(filename, (v) => ({ ...v, cruiseName: name }))
+                }
+              />
+              <div
+                className="text-[0.78rem] font-semibold mt-0.5"
+                style={{ color: 'var(--color-dim)' }}
+              >
+                {voyageRouteLongLabel(voyage)}
+              </div>
+            </div>
+            {ended ? (
+              <span
+                className="badge"
+                style={{ background: 'rgba(107,123,143,0.15)', color: 'var(--color-dim)' }}
+              >
+                Ended
+              </span>
+            ) : (
+              <span
+                className="badge"
+                style={{ background: 'rgba(16,185,129,0.15)', color: 'var(--color-mgo)' }}
+              >
+                Active
+              </span>
+            )}
           </div>
-          {ended ? (
-            <span
-              className="badge"
-              style={{ background: 'rgba(107,123,143,0.15)', color: 'var(--color-dim)' }}
-            >
-              Ended
-            </span>
-          ) : (
-            <span
-              className="badge"
-              style={{ background: 'rgba(16,185,129,0.15)', color: 'var(--color-mgo)' }}
-            >
-              Active
-            </span>
-          )}
-          <div className="flex-1" />
-          {ship && (
-            <span
-              className="text-[0.65rem] font-mono px-2 py-0.5 rounded"
-              style={{ background: 'var(--color-surface)', color: 'var(--color-dim)', border: '1px solid var(--color-border-subtle)' }}
-              title="Ship"
-            >
-              {ship.code} · {ship.displayName}
-            </span>
-          )}
-          <div className="total-pill" title="Storage filename">{filename}</div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {ship && (
+              <span
+                className="text-[0.65rem] font-mono px-2 py-0.5 rounded"
+                style={{ background: 'var(--color-surface)', color: 'var(--color-dim)', border: '1px solid var(--color-border-subtle)' }}
+                title="Ship"
+              >
+                {ship.code} · {ship.displayName}
+              </span>
+            )}
+            <div className="flex-1" />
+            <div className="total-pill" title="Storage filename">{filename}</div>
+          </div>
         </div>
         <div className="p-5 grid grid-cols-1 md:grid-cols-4 gap-5">
           <Field
@@ -341,6 +358,73 @@ export function VoyageDetail({
         </div>
       </div>
     </div>
+  );
+}
+
+interface CruiseNameHeadingProps {
+  voyage: Voyage;
+  editMode: boolean;
+  onSave: (name: string) => void;
+}
+
+// Read-only mode renders the cruise name as the cruise card's primary heading.
+// Edit Mode renders the same large text inside an inline form input so the
+// Chief can rename a voyage without leaving the detail pane. Save commits on
+// blur (and Enter); Escape reverts. Empty values are rejected to match the
+// "required at creation" contract — they revert to the previous name.
+function CruiseNameHeading({ voyage, editMode, onSave }: CruiseNameHeadingProps) {
+  const saved = voyage.cruiseName || '';
+  const [draft, setDraft] = useState(saved);
+
+  useEffect(() => {
+    setDraft(saved);
+  }, [saved]);
+
+  if (!editMode) {
+    return (
+      <div
+        className="text-[1.25rem] font-extrabold tracking-tight truncate"
+        style={{ color: 'var(--color-text)' }}
+        title={saved || undefined}
+      >
+        {saved || <span style={{ color: 'var(--color-faint)' }}>Unnamed cruise</span>}
+      </div>
+    );
+  }
+
+  const commit = () => {
+    const next = draft.trim();
+    if (!next) {
+      setDraft(saved);
+      return;
+    }
+    if (next !== saved) onSave(next);
+  };
+
+  const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      (e.currentTarget as HTMLInputElement).blur();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setDraft(saved);
+      (e.currentTarget as HTMLInputElement).blur();
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      className="form-input text-[1.25rem] font-extrabold tracking-tight"
+      style={{ background: 'var(--color-surface2)' }}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={onKey}
+      placeholder="e.g. Best of Scandinavia"
+      aria-label="Cruise name"
+      maxLength={80}
+    />
   );
 }
 

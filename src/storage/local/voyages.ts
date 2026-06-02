@@ -164,6 +164,7 @@ export async function listVoyages(shipId: string): Promise<VoyageManifestEntry[]
         toPort: voyage?.toPort ?? emptyPort,
         startDate: voyage?.startDate ?? '',
         endDate: voyage?.endDate ?? '',
+        cruiseName: voyage?.cruiseName ?? '',
         ended: !!voyage?.voyageEnd,
       });
     } catch (e) {
@@ -178,6 +179,7 @@ export async function listVoyages(shipId: string): Promise<VoyageManifestEntry[]
         toPort: emptyPort,
         startDate: '',
         endDate: '',
+        cruiseName: '',
         ended: false,
       });
     }

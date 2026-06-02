@@ -145,6 +145,7 @@ export function defaultVoyage(shipId: string | null, shipClass: ShipClass): Voya
     toPort: { code: '', name: '', country: '', locode: '' },
     startDate: '',
     endDate: '',
+    cruiseName: '',
     legs: [],
     densities: defaultDensities(shipClass),
     voyageEnd: null,

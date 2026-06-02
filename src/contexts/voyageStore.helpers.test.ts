@@ -18,6 +18,7 @@ function entry(over: Partial<VoyageManifestEntry>): VoyageManifestEntry {
     toPort: emptyPort,
     startDate: '',
     endDate: '',
+    cruiseName: '',
     ended: false,
     ...over,
   };
@@ -239,6 +240,7 @@ describe('filterVoyages', () => {
       toPort: { code: 'FLL', name: 'Fort Lauderdale', country: 'US', locode: 'USFLL' },
       startDate: '2026-01-15',
       endDate: '2026-01-22',
+      cruiseName: '',
       ended: true,
     },
     {
@@ -248,6 +250,7 @@ describe('filterVoyages', () => {
       toPort: { code: 'CZM', name: 'Cozumel', country: 'MX', locode: 'MXCZM' },
       startDate: '2026-02-04',
       endDate: '',
+      cruiseName: '',
       ended: false,
     },
   ];
