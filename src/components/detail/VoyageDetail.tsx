@@ -3,8 +3,16 @@
 // + Densities + Legs list.
 
 import type { FocusEvent, KeyboardEvent } from 'react';
-import { calcVoyageTotals, type FuelTotals } from '../../domain/calculations';
-import { formatMT } from '../../domain/calculations';
+import {
+  calcVoyageTotals,
+  calcFuelByMode,
+  calcBoilerFuelByMode,
+  calcDistanceTime,
+  calcLoopHours,
+  formatMT,
+  formatHours,
+  type FuelTotals,
+} from '../../domain/calculations';
 import { sortLegsByDate, voyageRouteLongLabel } from '../../domain/factories';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useToast } from '../../hooks/useToast';
@@ -113,6 +121,12 @@ export function VoyageDetail({
   const { reopenVoyage, updateVoyage } = useVoyageStore();
   const toast = useToast();
   const totals = calcVoyageTotals(voyage, shipClass);
+  const fuelByMode = calcFuelByMode(voyage, shipClass);
+  const boilerByMode = calcBoilerFuelByMode(voyage, shipClass);
+  const distanceTime = calcDistanceTime(voyage);
+  const loopHours = calcLoopHours(voyage);
+  const fmtMiles = (n: number) =>
+    n ? (Number.isInteger(n) ? String(n) : n.toFixed(1)) : '0';
   const ended = !!voyage.voyageEnd;
   const rob = lastReportRob(voyage);
   const water = aggregateFreshWater(voyage);
@@ -258,6 +272,86 @@ export function VoyageDetail({
                 Recorded at End Voyage.
               </p>
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* Operating Profile */}
+      <div className="section-label mb-3">Operating Profile</div>
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-[14px] mb-5">
+        {/* Fuel by Mode matrix */}
+        <div className="cat-card fuel md:col-span-3">
+          <div className="cat-label">
+            Fuel by Mode
+            <span className="ml-auto font-mono text-[0.65rem] font-semibold" style={{ color: 'var(--color-dim)' }}>
+              MT · all legs
+            </span>
+          </div>
+          <div className="cat-body">
+            <table className="w-full font-mono text-[0.8rem]">
+              <thead>
+                <tr style={{ color: 'var(--color-dim)' }}>
+                  <th className="text-left font-semibold py-1" />
+                  <th className="text-right font-semibold py-1 px-2">Sailing</th>
+                  <th className="text-right font-semibold py-1 px-2">In Port</th>
+                  <th className="text-right font-semibold py-1 px-2">St-By</th>
+                  <th className="text-right font-semibold py-1 px-2">Σ Fuel</th>
+                </tr>
+              </thead>
+              <tbody>
+                {FUEL_COLS.map(({ key, label }) => (
+                  <tr key={key} style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
+                    <td className="text-left py-1" style={{ color: 'var(--color-dim)' }}>{label}</td>
+                    <td className="text-right py-1 px-2">{formatMT(fuelByMode.sailing[key])}</td>
+                    <td className="text-right py-1 px-2">{formatMT(fuelByMode.port[key])}</td>
+                    <td className="text-right py-1 px-2">{formatMT(fuelByMode.standby[key])}</td>
+                    <td className="text-right py-1 px-2 font-semibold">
+                      {formatMT(fuelByMode.sailing[key] + fuelByMode.port[key] + fuelByMode.standby[key])}
+                    </td>
+                  </tr>
+                ))}
+                <tr style={{ borderTop: '2px solid var(--color-border-subtle)' }}>
+                  <td className="text-left py-1 font-semibold">Σ Mode</td>
+                  <td className="text-right py-1 px-2 font-semibold">{formatMT(fuelByMode.sailing.total)}</td>
+                  <td className="text-right py-1 px-2 font-semibold">{formatMT(fuelByMode.port.total)}</td>
+                  <td className="text-right py-1 px-2 font-semibold">{formatMT(fuelByMode.standby.total)}</td>
+                  <td className="text-right py-1 px-2 font-bold">
+                    {formatMT(fuelByMode.sailing.total + fuelByMode.port.total + fuelByMode.standby.total)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Hours & Distance */}
+        <div className="cat-card water md:col-span-2">
+          <div className="cat-label">Hours &amp; Distance</div>
+          <div className="cat-body">
+            <Mini label="Sailed" value={`${fmtMiles(distanceTime.sailedMiles)} nm · ${formatHours(distanceTime.sailedHours)} h`} />
+            <Mini label="St-By"  value={`${fmtMiles(distanceTime.stbyMiles)} nm · ${formatHours(distanceTime.stbyHours)} h`} />
+            <Mini label="In Port" value={`${formatHours(distanceTime.portHours)} h`} />
+            <p className="text-[0.62rem] italic mt-1" style={{ color: 'var(--color-faint)' }}>
+              Port = time alongside between calls.
+            </p>
+          </div>
+        </div>
+
+        {/* Boiler Fuel */}
+        <div className="cat-card fuel">
+          <div className="cat-label">Boiler Fuel</div>
+          <div className="cat-body">
+            <Mini label="Sailing" value={formatMT(boilerByMode.sailing)} suffix="MT" />
+            <Mini label="In Port" value={formatMT(boilerByMode.port)} suffix="MT" />
+          </div>
+        </div>
+
+        {/* AEP Loop Hours */}
+        <div className="cat-card chem md:col-span-3">
+          <div className="cat-label">AEP Loop Hours</div>
+          <div className="cat-body">
+            <Mini label="Open Loop"   value={formatHours(loopHours.openHours)}   suffix="h" />
+            <Mini label="Closed Loop" value={formatHours(loopHours.closedHours)} suffix="h" />
           </div>
         </div>
       </section>
