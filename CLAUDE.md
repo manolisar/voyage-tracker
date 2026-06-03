@@ -194,6 +194,16 @@ the same module. The section follows the §7 `.cat-card` motif and is
 display-only (identical in View and Edit mode). Design spec:
 [docs/superpowers/specs/2026-06-03-operating-mode-subsums-design.md](docs/superpowers/specs/2026-06-03-operating-mode-subsums-design.md).
 
+**Collapsible summary sections:** both Cruise Summary and Operating Profile
+are wrapped in a `CollapsibleSection` ([src/components/detail/VoyageDetail.tsx](src/components/detail/VoyageDetail.tsx)) —
+the section label doubles as a toggle (chevron rotates when open). Collapse
+state persists per-section in `localStorage` under `vt.collapse.<id>`
+(`cruiseSummary`, `operatingProfile`; `'1'` = collapsed). **Operating Profile
+defaults collapsed** so the Legs list / Add Leg stay within reach; Cruise
+Summary defaults open. The detail pane is `max-w-6xl` to use ECR-monitor width,
+and the `.fuel-cols` figure cluster reflows to 2×2 below 540 px so the Σ Total
+never clips on the mobile drawer breakpoint.
+
 **Leg report tabs:** Departure, Arrival, and Nav Report are not sidebar tree
 children. Clicking a leg routes to the first incomplete report tab in this
 order: Departure → Arrival → Nav Report, falling back to Departure when all are
