@@ -396,6 +396,8 @@ h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Manrope', sans-serif; }
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .badge-edit {
   background: var(--color-warn-bg);
@@ -581,8 +583,14 @@ h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Manrope', sans-serif; }
 .grid > .cat-card:nth-child(4) { animation-delay: 240ms; }
 
 /* fuel columns */
-.fuel-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.fuel-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; max-width: 760px; margin-inline: auto; }
 .fuel-cols.with-sigma { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+/* Narrow screens: reflow the fuel figures to 2×2 so the Σ Total never clips. */
+@media (max-width: 540px) {
+  .fuel-cols, .fuel-cols.with-sigma { grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+  .fc-big { font-size: 1.5rem; }
+}
 .fuel-col { text-align: center; }
 .fc-type { font-size: 0.6rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 5px; }
 .fc-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }

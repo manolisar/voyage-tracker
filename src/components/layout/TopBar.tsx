@@ -30,7 +30,7 @@ export function TopBar({
 
   return (
     <header
-      className="flex items-center gap-3 px-4 h-14 border-b shrink-0"
+      className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 min-h-14 border-b shrink-0"
       style={{
         background: 'var(--color-surface)',
         borderColor: 'var(--color-border-subtle)',
@@ -64,8 +64,7 @@ export function TopBar({
         </div>
       </div>
 
-      <div className="flex-1" />
-
+      <div className="flex items-center gap-2 ml-auto flex-wrap justify-end">
       <span className={`badge ${editMode ? 'badge-edit' : 'badge-view'}`} role="status">
         {editMode ? (
           <>
@@ -150,6 +149,7 @@ export function TopBar({
       >
         <LogOut className="w-4 h-4" style={{ color: 'var(--color-dim)' }} />
       </button>
+      </div>
     </header>
   );
 }

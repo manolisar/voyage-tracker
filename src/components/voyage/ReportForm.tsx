@@ -256,7 +256,7 @@ export function ReportForm({ report, onChange, densities, shipClass, readOnly = 
           <div className="cat-card fuel" style={{ gridColumn: 'unset' }}>
             <div className="cat-label">{isDeparture ? '🚢' : '⚓'} {isDeparture ? 'Departure' : 'Arrival'} Totals (MT)</div>
             <div className="cat-body">
-              <div className="fuel-cols" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr' }}>
+              <div className="fuel-cols with-sigma">
                 {FUEL_KEYS.map((f) => (
                   <div key={f} className={`fuel-col ${f.toLowerCase()}`}>
                     <div className="fc-type"><span className="fc-dot"></span>{f}</div>
