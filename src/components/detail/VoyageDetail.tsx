@@ -291,17 +291,17 @@ export function VoyageDetail({
             <table className="w-full font-mono text-[0.8rem]">
               <thead>
                 <tr style={{ color: 'var(--color-dim)' }}>
-                  <th className="text-left font-semibold py-1" />
-                  <th className="text-right font-semibold py-1 px-2">Sailing</th>
-                  <th className="text-right font-semibold py-1 px-2">In Port</th>
-                  <th className="text-right font-semibold py-1 px-2">St-By</th>
-                  <th className="text-right font-semibold py-1 px-2">Σ Fuel</th>
+                  <th scope="col" className="text-left font-semibold py-1" />
+                  <th scope="col" className="text-right font-semibold py-1 px-2">Sailing</th>
+                  <th scope="col" className="text-right font-semibold py-1 px-2">In Port</th>
+                  <th scope="col" className="text-right font-semibold py-1 px-2">St-By</th>
+                  <th scope="col" className="text-right font-semibold py-1 px-2">Σ Fuel</th>
                 </tr>
               </thead>
               <tbody>
                 {FUEL_COLS.map(({ key, label }) => (
                   <tr key={key} style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
-                    <td className="text-left py-1" style={{ color: 'var(--color-dim)' }}>{label}</td>
+                    <th scope="row" className="text-left py-1" style={{ color: 'var(--color-dim)' }}>{label}</th>
                     <td className="text-right py-1 px-2">{formatMT(fuelByMode.sailing[key])}</td>
                     <td className="text-right py-1 px-2">{formatMT(fuelByMode.port[key])}</td>
                     <td className="text-right py-1 px-2">{formatMT(fuelByMode.standby[key])}</td>
@@ -311,7 +311,7 @@ export function VoyageDetail({
                   </tr>
                 ))}
                 <tr style={{ borderTop: '2px solid var(--color-border-subtle)' }}>
-                  <td className="text-left py-1 font-semibold">Σ Mode</td>
+                  <th scope="row" className="text-left py-1 font-semibold">Σ Mode</th>
                   <td className="text-right py-1 px-2 font-semibold">{formatMT(fuelByMode.sailing.total)}</td>
                   <td className="text-right py-1 px-2 font-semibold">{formatMT(fuelByMode.port.total)}</td>
                   <td className="text-right py-1 px-2 font-semibold">{formatMT(fuelByMode.standby.total)}</td>
