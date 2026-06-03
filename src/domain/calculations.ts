@@ -190,8 +190,10 @@ export function calcBoilerFuelByMode(
 }
 
 // Parse an elapsed duration "HH:MM" (hours may exceed 24, e.g. "144:30") to
-// minutes. Returns null on blank/invalid input. Distinct from the wall-clock
-// 0-23h parser in VoyageReportSection — this one allows arbitrary hour count.
+// minutes. Returns null on blank/invalid input. Distinct from `parseHHMM`
+// (wall-clock, 0-23 h) in VoyageReportSection.tsx; see also
+// `steamingTimeToDecimalHours` there, which uses the same arbitrary-hours
+// regex but returns a decimal-hours string instead of minutes.
 export function parseHHMMToMinutes(s: string | null | undefined): number | null {
   if (!s || typeof s !== 'string') return null;
   const m = s.match(/^(\d+):(\d{2})$/);
