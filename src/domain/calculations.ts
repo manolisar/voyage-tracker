@@ -106,3 +106,50 @@ export function calcPhaseTotals(
   }
   return out;
 }
+
+export interface FuelByMode {
+  sailing: FuelTotals;
+  port: FuelTotals;
+  standby: FuelTotals;
+}
+
+// Phase `type` (from ship-class templates) → operating-mode bucket.
+const MODE_BY_PHASE_TYPE: Record<string, keyof FuelByMode> = {
+  sea: 'sailing',
+  port: 'port',
+  standby: 'standby',
+};
+
+// Split voyage consumption into Sailing / In Port / St-By by phase type.
+// The three mode totals sum to calcVoyageTotals (every typed phase is counted
+// exactly once). Phases whose type isn't one of sea/port/standby are ignored.
+export function calcFuelByMode(
+  voyage: Pick<Voyage, 'legs' | 'densities'> | null | undefined,
+  shipClass: ShipClass,
+): FuelByMode {
+  const mk = (): FuelTotals => ({ hfo: 0, mgo: 0, lsfo: 0, total: 0 });
+  const out: FuelByMode = { sailing: mk(), port: mk(), standby: mk() };
+  if (!voyage?.legs) return out;
+  const densities: DensityMap = voyage.densities || defaultDensities(shipClass);
+
+  for (const leg of voyage.legs) {
+    for (const report of [leg.departure, leg.arrival]) {
+      if (!report?.phases) continue;
+      for (const phase of report.phases) {
+        const mode = MODE_BY_PHASE_TYPE[String(phase?.type || '').toLowerCase()];
+        if (!mode || !phase.equipment) continue;
+        const bucket = out[mode];
+        for (const eq of Object.values(phase.equipment)) {
+          const cons = calcConsumption(eq.start, eq.end, eq.fuel, densities);
+          if (cons == null) continue;
+          const fuelKey = String(eq.fuel || '').toLowerCase();
+          if (fuelKey === 'hfo' || fuelKey === 'mgo' || fuelKey === 'lsfo') {
+            bucket[fuelKey] += cons;
+          }
+          bucket.total += cons;
+        }
+      }
+    }
+  }
+  return out;
+}

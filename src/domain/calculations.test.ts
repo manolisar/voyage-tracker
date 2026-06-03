@@ -5,6 +5,7 @@ import {
   calcVoyageTotals,
   calcVoyageFreshWaterTotal,
   calcPhaseTotals,
+  calcFuelByMode,
 } from './calculations';
 import solsticeClassRaw from '../../public/ship-classes/solstice-class.json';
 import type { Phase, ShipClass, Voyage } from '../types/domain';
@@ -186,5 +187,58 @@ describe('calcPhaseTotals', () => {
     expect(calcPhaseTotals({ equipment: {} } as unknown as Phase, { HFO: 0.92 })).toEqual({
       hfo: 0, mgo: 0, lsfo: 0, total: 0,
     });
+  });
+});
+
+describe('calcFuelByMode', () => {
+  const densities = { HFO: 0.92, MGO: 0.83, LSFO: 0.92 };
+
+  it('buckets consumption by phase type and the three modes sum to calcVoyageTotals', () => {
+    const voyage = {
+      densities,
+      legs: [
+        {
+          departure: {
+            phases: [
+              { type: 'port',    equipment: { dg12: { start: '0', end: '10000', fuel: 'HFO' } } }, // 9.20 port
+              { type: 'standby', equipment: { dg4:  { start: '0', end: '5000',  fuel: 'HFO' } } }, // 4.60 standby
+            ],
+          },
+          arrival: {
+            phases: [
+              { type: 'sea',     equipment: { dg12: { start: '0', end: '20000', fuel: 'LSFO' } } }, // 18.40 sailing
+              { type: 'standby', equipment: { dg3:  { start: '0', end: '10000', fuel: 'MGO' } } },  // 8.30 standby
+            ],
+          },
+        },
+      ],
+    };
+    const m = calcFuelByMode(voyage as unknown as Voyage, solsticeClass);
+    expect(m.port.hfo).toBeCloseTo(9.2, 2);
+    expect(m.sailing.lsfo).toBeCloseTo(18.4, 2);
+    expect(m.standby.hfo).toBeCloseTo(4.6, 2);
+    expect(m.standby.mgo).toBeCloseTo(8.3, 2);
+    expect(m.port.total).toBeCloseTo(9.2, 2);
+    expect(m.sailing.total).toBeCloseTo(18.4, 2);
+    expect(m.standby.total).toBeCloseTo(12.9, 2);
+
+    const t = calcVoyageTotals(voyage as unknown as Voyage, solsticeClass);
+    expect(m.sailing.total + m.port.total + m.standby.total).toBeCloseTo(t.total, 2);
+  });
+
+  it('ignores phases with unknown / missing type and returns zeros on empty voyage', () => {
+    const voyage = {
+      densities,
+      legs: [
+        { departure: { phases: [{ type: 'mystery', equipment: { dg12: { start: '0', end: '10000', fuel: 'HFO' } } }] }, arrival: { phases: [] } },
+      ],
+    };
+    const m = calcFuelByMode(voyage as unknown as Voyage, solsticeClass);
+    expect(m.sailing.total).toBe(0);
+    expect(m.port.total).toBe(0);
+    expect(m.standby.total).toBe(0);
+
+    const empty = calcFuelByMode({ legs: [] } as unknown as Voyage, solsticeClass);
+    expect(empty.port).toEqual({ hfo: 0, mgo: 0, lsfo: 0, total: 0 });
   });
 });
