@@ -165,6 +165,35 @@ arrival report — they are flow quantities. *ROB* values (fuel ROB,
 fresh-water ROB, NaOH ROB) show the **latest non-empty arrival reading**
 because they are running tank levels, not additive.
 
+**Operating Profile (Voyage Detail pane):** a second, read-only summary
+section below Cruise Summary that breaks the voyage down by operating mode.
+All values are **derived** from existing voyage data — no schema changes, no
+new inputs — by four pure functions in [src/domain/calculations.ts](src/domain/calculations.ts):
+
+- **Fuel by Mode** (`calcFuelByMode`) — every phase's consumption bucketed by
+  `phase.type`: `sea` → Sailing, `port` → In Port, `standby` → St-By. Rendered
+  as an HFO/MGO/LSFO × mode matrix; the three mode totals sum to
+  `calcVoyageTotals` (an asserted invariant — built-in cross-check). St-By fuel
+  includes *all* standby-phase equipment (engines **and** boilers).
+- **Boiler Fuel** (`calcBoilerFuelByMode`) — boiler-only consumption (ship-class
+  `category === 'boiler'`), Sailing + In Port only. St-By boiler fuel is *not*
+  shown here — it already lives inside the St-By bucket of Fuel by Mode.
+- **Hours & Distance** (`calcDistanceTime`) — sailed miles+hrs and St-By
+  miles+hrs come from the Nav Report (`voyage.totalMiles`/`steamingTime`,
+  `pierToFA`/`sbeToBerth`). **In-port hrs are derived**: for each consecutive
+  call, `next departure SBE − this arrival FWE`. SBE/FWE **prefer the Nav
+  Report** (Bridge-owned nav events) and fall back to engine-report
+  `timeEvents`; dates come from the engine reports. The first departure and
+  final arrival have no pairing, so their alongside time is excluded by design.
+- **AEP Loop Hours** (`calcLoopHours`) — sums `aep.openLoopHrs` /
+  `closedLoopHrs` (HH:MM) across both reports of every leg.
+
+Durations display as **decimal hours** (1 dp); fuel as MT (2 dp). Helpers
+`parseHHMMToMinutes` (allows elapsed >24 h) and `formatHours` are exported from
+the same module. The section follows the §7 `.cat-card` motif and is
+display-only (identical in View and Edit mode). Design spec:
+[docs/superpowers/specs/2026-06-03-operating-mode-subsums-design.md](docs/superpowers/specs/2026-06-03-operating-mode-subsums-design.md).
+
 **Leg report tabs:** Departure, Arrival, and Nav Report are not sidebar tree
 children. Clicking a leg routes to the first incomplete report tab in this
 order: Departure → Arrival → Nav Report, falling back to Departure when all are
@@ -309,4 +338,4 @@ Voyage_Tracker_v7/
 
 ---
 
-*Last updated: 2026-05-10.*
+*Last updated: 2026-06-03.*
