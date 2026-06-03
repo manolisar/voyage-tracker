@@ -6,6 +6,7 @@ import {
   calcVoyageFreshWaterTotal,
   calcPhaseTotals,
   calcFuelByMode,
+  calcBoilerFuelByMode,
 } from './calculations';
 import solsticeClassRaw from '../../public/ship-classes/solstice-class.json';
 import type { Phase, ShipClass, Voyage } from '../types/domain';
@@ -240,5 +241,42 @@ describe('calcFuelByMode', () => {
 
     const empty = calcFuelByMode({ legs: [] } as unknown as Voyage, solsticeClass);
     expect(empty.port).toEqual({ hfo: 0, mgo: 0, lsfo: 0, total: 0 });
+  });
+});
+
+describe('calcBoilerFuelByMode', () => {
+  const densities = { HFO: 0.92, MGO: 0.83, LSFO: 0.92 };
+
+  it('counts only boiler equipment, only in sailing and port phases', () => {
+    const voyage = {
+      densities,
+      legs: [
+        {
+          departure: {
+            phases: [
+              { type: 'port', equipment: {
+                boiler1: { start: '0', end: '10000', fuel: 'MGO' }, // 8.30 port boiler
+                dg12:    { start: '0', end: '10000', fuel: 'HFO' }, // engine, ignored
+              } },
+            ],
+          },
+          arrival: {
+            phases: [
+              { type: 'sea',     equipment: { boiler2: { start: '0', end: '20000', fuel: 'MGO' } } }, // 16.60 sailing boiler
+              { type: 'standby', equipment: { boiler1: { start: '0', end: '5000',  fuel: 'MGO' } } }, // standby, ignored
+            ],
+          },
+        },
+      ],
+    };
+    const b = calcBoilerFuelByMode(voyage as unknown as Voyage, solsticeClass);
+    expect(b.port).toBeCloseTo(8.3, 2);
+    expect(b.sailing).toBeCloseTo(16.6, 2);
+  });
+
+  it('returns zeros on empty voyage', () => {
+    expect(calcBoilerFuelByMode({ legs: [] } as unknown as Voyage, solsticeClass)).toEqual({
+      sailing: 0, port: 0,
+    });
   });
 });

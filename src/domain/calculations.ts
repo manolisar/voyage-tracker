@@ -153,3 +153,37 @@ export function calcFuelByMode(
   }
   return out;
 }
+
+// Boiler-only consumption, Sailing + In Port (St-By boiler fuel is intentionally
+// excluded here — it's already inside calcFuelByMode().standby). Boilers are
+// MGO-only, so a single MT number per mode suffices.
+export function calcBoilerFuelByMode(
+  voyage: Pick<Voyage, 'legs' | 'densities'> | null | undefined,
+  shipClass: ShipClass,
+): { sailing: number; port: number } {
+  const out = { sailing: 0, port: 0 };
+  if (!voyage?.legs) return out;
+  const densities: DensityMap = voyage.densities || defaultDensities(shipClass);
+  const boilerKeys = new Set(
+    (shipClass.equipment || []).filter((e) => e.category === 'boiler').map((e) => e.key),
+  );
+
+  for (const leg of voyage.legs) {
+    for (const report of [leg.departure, leg.arrival]) {
+      if (!report?.phases) continue;
+      for (const phase of report.phases) {
+        const t = String(phase?.type || '').toLowerCase();
+        const mode: 'sailing' | 'port' | null =
+          t === 'sea' ? 'sailing' : t === 'port' ? 'port' : null;
+        if (!mode || !phase.equipment) continue;
+        for (const [key, eq] of Object.entries(phase.equipment)) {
+          if (!boilerKeys.has(key)) continue;
+          const cons = calcConsumption(eq.start, eq.end, eq.fuel, densities);
+          if (cons == null) continue;
+          out[mode] += cons;
+        }
+      }
+    }
+  }
+  return out;
+}
