@@ -10,6 +10,7 @@ import {
   parseHHMMToMinutes,
   formatHours,
   calcDistanceTime,
+  calcLoopHours,
 } from './calculations';
 import solsticeClassRaw from '../../public/ship-classes/solstice-class.json';
 import type { Phase, ShipClass, Voyage } from '../types/domain';
@@ -379,5 +380,31 @@ describe('calcDistanceTime', () => {
     expect(calcDistanceTime({ legs: [] } as unknown as Voyage)).toEqual({
       sailedMiles: 0, sailedHours: 0, stbyMiles: 0, stbyHours: 0, portHours: 0,
     });
+  });
+});
+
+describe('calcLoopHours', () => {
+  it('sums open/closed loop HH:MM across departure + arrival of every leg', () => {
+    const voyage = {
+      legs: [
+        {
+          departure: { aep: { openLoopHrs: '10:00', closedLoopHrs: '02:30' } },
+          arrival:   { aep: { openLoopHrs: '08:30', closedLoopHrs: '01:00' } },
+        },
+        {
+          departure: { aep: { openLoopHrs: '12:00', closedLoopHrs: '' } },
+          arrival:   { aep: { openLoopHrs: '', closedLoopHrs: '03:00' } },
+        },
+      ],
+    };
+    const l = calcLoopHours(voyage as unknown as Voyage);
+    expect(l.openHours).toBeCloseTo(30.5, 2);   // 10 + 8.5 + 12
+    expect(l.closedHours).toBeCloseTo(6.5, 2);  // 2.5 + 1 + 3
+  });
+
+  it('returns zeros on empty voyage / missing aep', () => {
+    expect(calcLoopHours({ legs: [] } as unknown as Voyage)).toEqual({ openHours: 0, closedHours: 0 });
+    const v = { legs: [{ departure: {}, arrival: {} }] };
+    expect(calcLoopHours(v as unknown as Voyage)).toEqual({ openHours: 0, closedHours: 0 });
   });
 });

@@ -288,3 +288,22 @@ export function calcDistanceTime(
   out.portHours = portMins / 60;
   return out;
 }
+
+// Sum AEP Open/Closed loop hours (entered HH:MM per report) across both reports
+// of every leg. Returns decimal hours.
+export function calcLoopHours(
+  voyage: Pick<Voyage, 'legs'> | null | undefined,
+): { openHours: number; closedHours: number } {
+  let openMins = 0;
+  let closedMins = 0;
+  if (!voyage?.legs) return { openHours: 0, closedHours: 0 };
+  for (const leg of voyage.legs) {
+    for (const report of [leg.departure, leg.arrival]) {
+      const o = parseHHMMToMinutes(report?.aep?.openLoopHrs);
+      const c = parseHHMMToMinutes(report?.aep?.closedLoopHrs);
+      if (o != null) openMins += o;
+      if (c != null) closedMins += c;
+    }
+  }
+  return { openHours: openMins / 60, closedHours: closedMins / 60 };
+}
