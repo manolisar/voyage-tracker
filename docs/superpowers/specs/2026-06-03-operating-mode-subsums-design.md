@@ -91,10 +91,17 @@ interface DistanceTime {
   sum, convert to decimal hours.
 - **`portHours` (derived):** sort legs by date (reuse `sortLegsByDate`). For each
   consecutive pair, compute the alongside gap:
-  `leg[i+1].departure (date + timeEvents.sbe)` − `leg[i].arrival (date + timeEvents.fwe)`.
-  Build a `Date`/epoch from `YYYY-MM-DD` + `HH:MM`. Skip any pair where a date or
-  time is missing/unparseable, or where the diff is ≤ 0 (data error). Sum the
-  positive gaps → decimal hours.
+  `leg[i+1].departure (date + SBE)` − `leg[i].arrival (date + FWE)`.
+  - **Timestamp source — prefer the Nav Report.** SBE/FWE are navigation events
+    owned by the Bridge OOW, so use the Nav Report first and fall back to the
+    engine report only when the Nav Report is absent or the field is blank:
+    - departure SBE = `leg[i+1].voyageReport?.departure.sbe || leg[i+1].departure.timeEvents.sbe`
+    - arrival FWE   = `leg[i].voyageReport?.arrival.fwe   || leg[i].arrival.timeEvents.fwe`
+  - **Date source:** the engine reports' `Report.date` (the Nav Report carries no
+    date of its own — it reads dep/arr dates from the engine reports).
+  - Build a `Date`/epoch from `YYYY-MM-DD` + `HH:MM`. Skip any pair where a date or
+    time is missing/unparseable, or where the diff is ≤ 0 (data error). Sum the
+    positive gaps → decimal hours.
   - **Edge cases (excluded by design):** the first leg's pre-departure alongside
     time has no preceding arrival, and the final arrival has no following
     departure — neither is counted. A caption notes "alongside, between calls".
@@ -181,7 +188,9 @@ Add to `src/domain/calculations.test.ts`:
 - `calcBoilerFuelByMode`: assert only boiler equipment counted, only sailing/port.
 - `calcDistanceTime`: Nav Report miles/hours sums; `portHours` derivation across
   a 3-leg fixture incl. a multi-day alongside gap and a leg with a missing
-  timestamp (skipped).
+  timestamp (skipped). Cover the timestamp-source preference: a leg whose Nav
+  Report supplies SBE/FWE (used) and one with no `voyageReport` that falls back
+  to engine-report `timeEvents`.
 - `calcLoopHours`: HH:MM sums across departure + arrival, incl. > 24 h totals.
 
 ## Out of scope
