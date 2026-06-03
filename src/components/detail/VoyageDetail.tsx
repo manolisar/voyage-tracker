@@ -2,7 +2,8 @@
 // Cruise card (name, dates, status) + Cruise Summary cards (fuel/water/chem/lube)
 // + Densities + Legs list.
 
-import type { FocusEvent, KeyboardEvent } from 'react';
+import type { FocusEvent, KeyboardEvent, ReactNode } from 'react';
+import { useState } from 'react';
 import {
   calcVoyageTotals,
   calcFuelByMode,
@@ -16,7 +17,7 @@ import {
 import { sortLegsByDate, voyageRouteLongLabel } from '../../domain/factories';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useToast } from '../../hooks/useToast';
-import { Trash2, Unlock } from '../Icons';
+import { ChevronRight, Trash2, Unlock } from '../Icons';
 import type { FuelKey, Leg, Ship, ShipClass, Voyage } from '../../types/domain';
 
 const FUEL_COLS: { key: keyof FuelTotals & string; label: FuelKey }[] = [
@@ -141,7 +142,7 @@ export function VoyageDetail({
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       {/* Cruise info card */}
       <section className="glass-card rounded-2xl overflow-hidden mb-5">
         <div className="leg-head px-5 py-4 flex flex-col gap-2">
@@ -208,8 +209,8 @@ export function VoyageDetail({
       </section>
 
       {/* Cruise summary */}
-      <div className="section-label mb-3">Cruise Summary</div>
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-[14px] mb-5">
+      <CollapsibleSection id="cruiseSummary" title="Cruise Summary">
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-[14px]">
         <div className="cat-card fuel md:col-span-3">
           <div className="cat-label">
             Fuel Consumption
@@ -275,10 +276,11 @@ export function VoyageDetail({
           </div>
         </div>
       </section>
+      </CollapsibleSection>
 
       {/* Operating Profile */}
-      <div className="section-label mb-3">Operating Profile</div>
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-[14px] mb-5">
+      <CollapsibleSection id="operatingProfile" title="Operating Profile" defaultCollapsed>
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-[14px]">
         {/* Fuel by Mode matrix */}
         <div className="cat-card fuel md:col-span-3">
           <div className="cat-label">
@@ -355,6 +357,7 @@ export function VoyageDetail({
           </div>
         </div>
       </section>
+      </CollapsibleSection>
 
       {/* Densities */}
       <section className="glass-card rounded-2xl p-5 mb-5">
@@ -451,6 +454,67 @@ export function VoyageDetail({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+interface CollapsibleSectionProps {
+  id: string;
+  title: string;
+  defaultCollapsed?: boolean;
+  children: ReactNode;
+}
+
+// Collapsible wrapper for the Cruise Summary / Operating Profile blocks. The
+// section-label doubles as the toggle (chevron rotates when open). Collapse
+// state persists per-section in localStorage so each user keeps their preferred
+// density and the primary action (the Legs list below) stays within reach.
+function CollapsibleSection({
+  id,
+  title,
+  defaultCollapsed = false,
+  children,
+}: CollapsibleSectionProps) {
+  const storeKey = `vt.collapse.${id}`;
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem(storeKey);
+      return v == null ? defaultCollapsed : v === '1';
+    } catch {
+      return defaultCollapsed;
+    }
+  });
+  const toggle = () =>
+    setCollapsed((c) => {
+      const next = !c;
+      try {
+        localStorage.setItem(storeKey, next ? '1' : '0');
+      } catch {
+        /* localStorage unavailable — keep in-memory state only */
+      }
+      return next;
+    });
+  const bodyId = `voyage-section-${id}`;
+  return (
+    <div className="mb-5">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={!collapsed}
+        aria-controls={bodyId}
+        className="section-label mb-3 flex items-center gap-2 w-full text-left"
+        style={{ cursor: 'pointer' }}
+      >
+        <span
+          className={`transition-transform duration-300 ${collapsed ? '' : 'rotate-90'}`}
+          style={{ color: 'var(--color-faint)' }}
+          aria-hidden="true"
+        >
+          <ChevronRight className="w-3.5 h-3.5" />
+        </span>
+        {title}
+      </button>
+      {!collapsed && <div id={bodyId}>{children}</div>}
     </div>
   );
 }
