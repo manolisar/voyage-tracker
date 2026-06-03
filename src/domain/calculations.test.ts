@@ -7,6 +7,9 @@ import {
   calcPhaseTotals,
   calcFuelByMode,
   calcBoilerFuelByMode,
+  parseHHMMToMinutes,
+  formatHours,
+  calcDistanceTime,
 } from './calculations';
 import solsticeClassRaw from '../../public/ship-classes/solstice-class.json';
 import type { Phase, ShipClass, Voyage } from '../types/domain';
@@ -277,6 +280,104 @@ describe('calcBoilerFuelByMode', () => {
   it('returns zeros on empty voyage', () => {
     expect(calcBoilerFuelByMode({ legs: [] } as unknown as Voyage, solsticeClass)).toEqual({
       sailing: 0, port: 0,
+    });
+  });
+});
+
+describe('parseHHMMToMinutes', () => {
+  it('parses elapsed durations including >24h', () => {
+    expect(parseHHMMToMinutes('02:30')).toBe(150);
+    expect(parseHHMMToMinutes('144:30')).toBe(8670);
+  });
+  it('returns null on blank / bad input', () => {
+    expect(parseHHMMToMinutes('')).toBeNull();
+    expect(parseHHMMToMinutes('1:2')).toBeNull();
+    expect(parseHHMMToMinutes('ab:cd')).toBeNull();
+    expect(parseHHMMToMinutes(null)).toBeNull();
+    expect(parseHHMMToMinutes('10:60')).toBeNull();
+  });
+});
+
+describe('formatHours', () => {
+  it('formats decimal hours to 1dp', () => {
+    expect(formatHours(142.5)).toBe('142.5');
+    expect(formatHours(0)).toBe('0.0');
+  });
+  it('handles null / NaN', () => {
+    expect(formatHours(null)).toBe('0.0');
+    expect(formatHours(NaN)).toBe('0.0');
+    expect(formatHours(undefined)).toBe('0.0');
+  });
+});
+
+describe('calcDistanceTime', () => {
+  it('sums Nav Report miles + hours and derives port hours across calls', () => {
+    const voyage = {
+      legs: [
+        {
+          // Leg 1: arrives port B on 2026-01-15 at 12:00 (FWE)
+          arrival: { date: '2026-01-15', timeEvents: { sbe: '', fwe: '', fa: '' } },
+          departure: { date: '2026-01-14', timeEvents: { sbe: '', fwe: '', fa: '' } },
+          voyageReport: {
+            departure: { sbe: '08:00', fa: '09:00', pierToFA: { distance: '5', time: '01:00', avgSpeed: '5.0' } },
+            voyage: { totalMiles: '1200', steamingTime: '50:00', averageSpeed: '24.0' },
+            arrival: { sbe: '11:00', fwe: '12:00', sbeToBerth: { distance: '6', time: '01:00', avgSpeed: '6.0' } },
+          },
+        },
+        {
+          // Leg 2: departs port B on 2026-01-16 at 12:00 (SBE) -> 24h alongside
+          arrival: { date: '2026-01-17', timeEvents: { sbe: '', fwe: '', fa: '' } },
+          departure: { date: '2026-01-16', timeEvents: { sbe: '', fwe: '', fa: '' } },
+          voyageReport: {
+            departure: { sbe: '12:00', fa: '13:00', pierToFA: { distance: '4', time: '01:00', avgSpeed: '4.0' } },
+            voyage: { totalMiles: '800', steamingTime: '30:00', averageSpeed: '26.7' },
+            arrival: { sbe: '', fwe: '', sbeToBerth: { distance: '', time: '', avgSpeed: '' } },
+          },
+        },
+      ],
+    };
+    const dt = calcDistanceTime(voyage as unknown as Voyage);
+    expect(dt.sailedMiles).toBeCloseTo(2000, 2);   // 1200 + 800
+    expect(dt.sailedHours).toBeCloseTo(80, 2);      // 50:00 + 30:00
+    expect(dt.stbyMiles).toBeCloseTo(15, 2);        // 5 + 6 + 4
+    expect(dt.stbyHours).toBeCloseTo(3, 2);         // 01:00 ×3
+    expect(dt.portHours).toBeCloseTo(24, 2);        // FWE 1/15 12:00 -> SBE 1/16 12:00
+  });
+
+  it('falls back to engine-report timeEvents when a leg has no voyageReport', () => {
+    const voyage = {
+      legs: [
+        {
+          arrival: { date: '2026-02-01', timeEvents: { sbe: '', fwe: '18:00', fa: '' } },
+          departure: { date: '2026-01-31', timeEvents: { sbe: '', fwe: '', fa: '' } },
+          voyageReport: null,
+        },
+        {
+          arrival: { date: '2026-02-03', timeEvents: { sbe: '', fwe: '', fa: '' } },
+          departure: { date: '2026-02-02', timeEvents: { sbe: '06:00', fwe: '', fa: '' } },
+          voyageReport: null,
+        },
+      ],
+    };
+    const dt = calcDistanceTime(voyage as unknown as Voyage);
+    expect(dt.sailedMiles).toBe(0);
+    expect(dt.portHours).toBeCloseTo(12, 2); // FWE 2/1 18:00 -> SBE 2/2 06:00
+  });
+
+  it('skips port gaps with missing timestamps and ignores non-positive gaps', () => {
+    const voyage = {
+      legs: [
+        { arrival: { date: '2026-03-01', timeEvents: { sbe: '', fwe: '', fa: '' } }, departure: { date: '2026-02-28', timeEvents: {} }, voyageReport: null },
+        { arrival: { date: '2026-03-03', timeEvents: {} }, departure: { date: '2026-03-02', timeEvents: { sbe: '06:00', fwe: '', fa: '' } }, voyageReport: null },
+      ],
+    };
+    const dt = calcDistanceTime(voyage as unknown as Voyage);
+    expect(dt.portHours).toBe(0); // leg-1 arrival FWE missing -> pair skipped
+  });
+
+  it('returns zeros on empty voyage', () => {
+    expect(calcDistanceTime({ legs: [] } as unknown as Voyage)).toEqual({
+      sailedMiles: 0, sailedHours: 0, stbyMiles: 0, stbyHours: 0, portHours: 0,
     });
   });
 });

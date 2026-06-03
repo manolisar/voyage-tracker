@@ -3,7 +3,8 @@
 // same kg/L value that's stored as t/m³ in the ship-class config.
 
 import { defaultDensities } from './shipClass';
-import type { FuelKey, Phase, ShipClass, Voyage } from '../types/domain';
+import { sortLegsByDate } from './factories';
+import type { FuelKey, Leg, Phase, ShipClass, Voyage } from '../types/domain';
 
 export interface FuelTotals {
   hfo: number;
@@ -185,5 +186,105 @@ export function calcBoilerFuelByMode(
       }
     }
   }
+  return out;
+}
+
+// Parse an elapsed duration "HH:MM" (hours may exceed 24, e.g. "144:30") to
+// minutes. Returns null on blank/invalid input. Distinct from the wall-clock
+// 0-23h parser in VoyageReportSection — this one allows arbitrary hour count.
+export function parseHHMMToMinutes(s: string | null | undefined): number | null {
+  if (!s || typeof s !== 'string') return null;
+  const m = s.match(/^(\d+):(\d{2})$/);
+  if (!m) return null;
+  const mm = parseInt(m[2], 10);
+  if (mm > 59) return null;
+  return parseInt(m[1], 10) * 60 + mm;
+}
+
+// Decimal hours (1dp) for display, e.g. 142.5. Returns '0.0' on null/NaN.
+export function formatHours(n: number | null | undefined): string {
+  if (n == null || isNaN(n)) return '0.0';
+  return Number(n).toFixed(1);
+}
+
+// Combine "YYYY-MM-DD" + "HH:MM" (wall-clock, 0-23h) into epoch ms (local).
+// Returns null if either part is missing or unparseable.
+function dateTimeToEpoch(
+  dateYMD: string | null | undefined,
+  hhmm: string | null | undefined,
+): number | null {
+  if (!dateYMD || !hhmm) return null;
+  const d = dateYMD.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const t = hhmm.match(/^(\d{1,2}):(\d{2})$/);
+  if (!d || !t) return null;
+  const hh = parseInt(t[1], 10);
+  const mm = parseInt(t[2], 10);
+  if (hh > 23 || mm > 59) return null;
+  const ms = new Date(+d[1], +d[2] - 1, +d[3], hh, mm, 0, 0).getTime();
+  return isNaN(ms) ? null : ms;
+}
+
+export interface DistanceTime {
+  sailedMiles: number; // Σ Nav Report voyage.totalMiles
+  sailedHours: number; // Σ steamingTime, decimal hours
+  stbyMiles: number;   // Σ pierToFA.distance + sbeToBerth.distance
+  stbyHours: number;   // Σ pierToFA.time + sbeToBerth.time, decimal hours
+  portHours: number;   // derived alongside gaps between consecutive calls
+}
+
+// Aggregate distance + time from the Nav Reports, and derive in-port hours
+// from the alongside gap between consecutive calls (arrival FWE -> next
+// departure SBE). SBE/FWE prefer the Nav Report (Bridge-owned) and fall back
+// to engine-report timeEvents; dates come from the engine reports.
+export function calcDistanceTime(
+  voyage: Pick<Voyage, 'legs'> | null | undefined,
+): DistanceTime {
+  const out: DistanceTime = {
+    sailedMiles: 0, sailedHours: 0, stbyMiles: 0, stbyHours: 0, portHours: 0,
+  };
+  if (!voyage?.legs) return out;
+
+  const addMiles = (v: string | null | undefined, into: 'sailedMiles' | 'stbyMiles') => {
+    const n = parseFloat(String(v ?? ''));
+    if (Number.isFinite(n) && n > 0) out[into] += n;
+  };
+
+  let sailedMins = 0;
+  let stbyMins = 0;
+  for (const leg of voyage.legs) {
+    const vr = leg.voyageReport;
+    if (!vr) continue;
+    addMiles(vr.voyage?.totalMiles, 'sailedMiles');
+    const sm = parseHHMMToMinutes(vr.voyage?.steamingTime);
+    if (sm != null) sailedMins += sm;
+
+    addMiles(vr.departure?.pierToFA?.distance, 'stbyMiles');
+    addMiles(vr.arrival?.sbeToBerth?.distance, 'stbyMiles');
+    const pm = parseHHMMToMinutes(vr.departure?.pierToFA?.time);
+    const am = parseHHMMToMinutes(vr.arrival?.sbeToBerth?.time);
+    if (pm != null) stbyMins += pm;
+    if (am != null) stbyMins += am;
+  }
+
+  // Port (alongside) hours: for each consecutive call, next departure SBE minus
+  // this arrival FWE. First departure and final arrival have no pairing, so the
+  // loop runs over legs[0..n-2] only.
+  const legs = sortLegsByDate(voyage.legs as Leg[]);
+  let portMins = 0;
+  for (let i = 0; i < legs.length - 1; i++) {
+    const arrLeg = legs[i];
+    const depLeg = legs[i + 1];
+    const fwe = arrLeg.voyageReport?.arrival?.fwe || arrLeg.arrival?.timeEvents?.fwe;
+    const sbe = depLeg.voyageReport?.departure?.sbe || depLeg.departure?.timeEvents?.sbe;
+    const arrEpoch = dateTimeToEpoch(arrLeg.arrival?.date, fwe);
+    const depEpoch = dateTimeToEpoch(depLeg.departure?.date, sbe);
+    if (arrEpoch == null || depEpoch == null) continue;
+    const diffMin = (depEpoch - arrEpoch) / 60000;
+    if (diffMin > 0) portMins += diffMin;
+  }
+
+  out.sailedHours = sailedMins / 60;
+  out.stbyHours = stbyMins / 60;
+  out.portHours = portMins / 60;
   return out;
 }
