@@ -69,7 +69,7 @@ export interface Report {
   rob: Record<FuelStorageKey, string>;
   bunkered: Record<FuelStorageKey, string>;
   freshWater: { rob: string; bunkered: string; production: string; consumption: string };
-  aep: { openLoopHrs: string; closedLoopHrs: string; alkaliCons: string; alkaliRob: string };
+  aep: { openLoopHrs: string; closedLoopHrs: string; alkaliCons: string; alkaliRob: string; alkaliBunkered: string };
   engineer: string;
 }
 

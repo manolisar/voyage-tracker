@@ -17,7 +17,7 @@ function report(overrides: Partial<Report> = {}): Report {
     rob: { hfo: '', mgo: '', lsfo: '' },
     bunkered: { hfo: '', mgo: '', lsfo: '' },
     freshWater: { rob: '', bunkered: '', production: '', consumption: '' },
-    aep: { openLoopHrs: '', closedLoopHrs: '', alkaliCons: '', alkaliRob: '' },
+    aep: { openLoopHrs: '', closedLoopHrs: '', alkaliCons: '', alkaliRob: '', alkaliBunkered: '' },
     engineer: '',
     ...overrides,
   };

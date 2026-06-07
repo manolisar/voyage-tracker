@@ -73,7 +73,7 @@ export function defaultReport(shipClass: ShipClass, type: ReportKind): Report {
     rob: { hfo: '', mgo: '', lsfo: '' },
     bunkered: { hfo: '', mgo: '', lsfo: '' },
     freshWater: { rob: '', bunkered: '', production: '', consumption: '' },
-    aep: { openLoopHrs: '', closedLoopHrs: '', alkaliCons: '', alkaliRob: '' },
+    aep: { openLoopHrs: '', closedLoopHrs: '', alkaliCons: '', alkaliRob: '', alkaliBunkered: '' },
     engineer: '',
     // NB: lubeOil intentionally absent — recorded only at End Voyage in v7.
   };

@@ -118,6 +118,11 @@ describe('defaultReport', () => {
     expect(r.bunkered).toEqual({ hfo: '', mgo: '', lsfo: '' });
   });
 
+  it('seeds aep.alkaliBunkered as an empty string', () => {
+    const r = defaultReport(solsticeClass, REPORT_TYPES.ARRIVAL);
+    expect(r.aep.alkaliBunkered).toBe('');
+  });
+
   it('does NOT include lubeOil (recorded only at End Voyage)', () => {
     const r = defaultReport(solsticeClass, REPORT_TYPES.DEPARTURE);
     expect((r as unknown as Record<string, unknown>).lubeOil).toBeUndefined();
