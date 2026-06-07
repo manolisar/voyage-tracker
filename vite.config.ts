@@ -8,7 +8,9 @@ export default defineConfig({
   base: '/voyage-tracker/',
   test: {
     // Vitest hosts the unit tests under src/. Playwright owns tests/e2e and
-    // ships its own runner — keep them out of Vitest's discovery.
-    exclude: ['node_modules', 'dist', 'tests/e2e/**'],
+    // ships its own runner — keep them out of Vitest's discovery. Patterns are
+    // **-anchored so nested copies (e.g. linked git worktrees registered under
+    // .claude/worktrees/) don't leak their e2e specs into the unit run.
+    exclude: ['**/node_modules/**', '**/dist/**', '**/tests/e2e/**', '.claude/**'],
   },
 })
