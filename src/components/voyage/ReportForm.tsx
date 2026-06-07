@@ -377,6 +377,16 @@ export function ReportForm({ report, onChange, densities, shipClass, readOnly = 
                       )}
                     </div>
                   </div>
+                  <div>
+                    <label className="form-label">NaOH Bunkered (L)</label>
+                    {readOnly ? (
+                      <ReadOnlyField value={report.aep?.alkaliBunkered} mono smaller />
+                    ) : (
+                      <input type="number" step="0.1" value={report.aep.alkaliBunkered}
+                        onChange={(e) => onChange({ ...report, aep: { ...report.aep, alkaliBunkered: e.target.value }})}
+                        className="form-input font-mono text-[0.72rem]" />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
