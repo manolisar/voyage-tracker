@@ -18,6 +18,7 @@ import { sortLegsByDate, voyageRouteLongLabel } from '../../domain/factories';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useToast } from '../../hooks/useToast';
 import { ChevronRight, Trash2, Unlock } from '../Icons';
+import { ReconciliationPanel } from './ReconciliationPanel';
 import type { FuelKey, Leg, Ship, ShipClass, Voyage } from '../../types/domain';
 
 const FUEL_COLS: { key: keyof FuelTotals & string; label: FuelKey }[] = [
@@ -365,6 +366,13 @@ export function VoyageDetail({
           </div>
         </div>
       </section>
+      </CollapsibleSection>
+
+      {/* Reconciliation */}
+      <CollapsibleSection id="reconciliation" title="Reconciliation" defaultCollapsed>
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-[14px]">
+          <ReconciliationPanel voyage={voyage} shipClass={shipClass} />
+        </section>
       </CollapsibleSection>
 
       {/* Densities */}
