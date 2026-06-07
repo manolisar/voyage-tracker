@@ -129,6 +129,8 @@ Nothing in the app enforces these partitions — they're workflow convention. An
 
 **Lub-oil:** recorded **only** at End Voyage (one entry per voyage), NOT in departure/arrival reports.
 
+**NaOH bunkering:** the arrival report's AEP/Alkali block carries `aep.alkaliBunkered` (L) alongside `alkaliCons` / `alkaliRob`, so chemical top-ups close the Reconciliation mass balance (see §6) the same way fuel `bunkered` and `freshWater.bunkered` do. Legacy files without the field read as `''`.
+
 This is data-driven via `public/ship-classes/solstice-class.json` so adding a new ship class later = drop a new JSON file.
 
 ---
@@ -194,13 +196,34 @@ the same module. The section follows the §7 `.cat-card` motif and is
 display-only (identical in View and Edit mode). Design spec:
 [docs/superpowers/specs/2026-06-03-operating-mode-subsums-design.md](docs/superpowers/specs/2026-06-03-operating-mode-subsums-design.md).
 
+**Reconciliation (Voyage Detail pane):** a third read-only collapsible section
+(below Operating Profile, defaults collapsed) that cross-checks the **metered
+counters against the manual ROB soundings** across consecutive cruises. For
+each resource it computes, via `calcReconciliation` in
+[src/domain/calculations.ts](src/domain/calculations.ts):
+`expected = prevCruiseEndROB + bunkering (+ fresh-water production) − metered
+consumption`, then `offset = measuredEndROB − expected`. Rows: HFO/MGO/LSFO
+(MT), Fresh Water, NaOH (L). The baseline (`prevCruiseEndROB`) is the latest
+non-empty **arrival** ROB of the previous **ended** cruise, loaded on demand via
+`findPreviousEndedVoyage` + `loadVoyage` ([src/components/detail/ReconciliationPanel.tsx](src/components/detail/ReconciliationPanel.tsx)).
+Bunkering/production are summed across all of the current voyage's reports;
+fuel/water/NaOH consumption reuse `calcVoyageTotals` /
+`calcVoyageFreshWaterTotal` / summed `alkaliCons`. The **offset** is muted when
+within tolerance and bold amber (with sign) beyond it. Tolerances are an
+**absolute numeric offset per resource group** (Fuel MT / Fresh Water / NaOH L;
+defaults 2 / 5 / 10), editable per-ship in Settings and persisted in IndexedDB
+ship-settings under `reconcileTolerances`. First cruise (no prior ended voyage)
+or a missing sounding degrades the affected row to `—` rather than a misleading
+number. Design spec:
+[docs/superpowers/specs/2026-06-07-cruise-reconciliation-design.md](docs/superpowers/specs/2026-06-07-cruise-reconciliation-design.md).
+
 **Collapsible summary sections:** both Cruise Summary and Operating Profile
 are wrapped in a `CollapsibleSection` ([src/components/detail/VoyageDetail.tsx](src/components/detail/VoyageDetail.tsx)) —
 the section label doubles as a toggle (chevron rotates when open). Collapse
 state persists per-section in `localStorage` under `vt.collapse.<id>`
-(`cruiseSummary`, `operatingProfile`; `'1'` = collapsed). **Operating Profile
-defaults collapsed** so the Legs list / Add Leg stay within reach; Cruise
-Summary defaults open. The detail pane is `max-w-6xl` to use ECR-monitor width,
+(`cruiseSummary`, `operatingProfile`, `reconciliation`; `'1'` = collapsed).
+**Operating Profile and Reconciliation default collapsed** so the Legs list /
+Add Leg stay within reach; Cruise Summary defaults open. The detail pane is `max-w-6xl` to use ECR-monitor width,
 and the `.fuel-cols` figure cluster reflows to 2×2 below 540 px so the Σ Total
 never clips on the mobile drawer breakpoint.
 
@@ -348,4 +371,4 @@ Voyage_Tracker_v7/
 
 ---
 
-*Last updated: 2026-06-03.*
+*Last updated: 2026-06-07.*
