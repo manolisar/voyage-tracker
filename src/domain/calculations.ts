@@ -4,7 +4,7 @@
 
 import { defaultDensities } from './shipClass';
 import { sortLegsByDate } from './factories';
-import type { FuelKey, FuelStorageKey, Leg, Phase, ReconcileTolerances, ShipClass, Voyage } from '../types/domain';
+import type { FuelKey, FuelStorageKey, Leg, Phase, ReconcileTolerances, Report, ShipClass, Voyage } from '../types/domain';
 
 export const DEFAULT_RECONCILE_TOLERANCES: ReconcileTolerances = {
   fuel: 2,
@@ -360,4 +360,111 @@ export function calcLoopHours(
     }
   }
   return { openHours: openMins / 60, closedHours: closedMins / 60 };
+}
+
+export interface ReconRow {
+  key: 'hfo' | 'mgo' | 'lsfo' | 'water' | 'naoh';
+  label: string;
+  unit: string;
+  prevRob: number | null;
+  bunker: number;
+  production: number | null;
+  consumption: number;
+  expected: number | null;
+  measured: number | null;
+  offset: number | null;
+  withinTolerance: boolean;
+}
+
+export interface ReconciliationResult {
+  hasPrev: boolean;
+  rows: ReconRow[];
+}
+
+// Parse a counter/sounding string to a number, or null when blank/invalid.
+function toNullableNum(s: string | null | undefined): number | null {
+  if (s == null || String(s).trim() === '') return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+// Sum a numeric field picked from every report (departure + arrival) of a
+// voyage. Blank/invalid entries contribute 0.
+function sumReports(
+  voyage: Pick<Voyage, 'legs'> | null | undefined,
+  pick: (r: Report) => string | null | undefined,
+): number {
+  let t = 0;
+  for (const leg of voyage?.legs || []) {
+    for (const r of [leg.departure, leg.arrival]) {
+      if (!r) continue;
+      const n = parseFloat(String(pick(r) ?? ''));
+      if (Number.isFinite(n)) t += n;
+    }
+  }
+  return t;
+}
+
+export function calcReconciliation(
+  voyage: Voyage,
+  prevVoyage: Voyage | null,
+  shipClass: ShipClass,
+  tol: ReconcileTolerances,
+): ReconciliationResult {
+  const hasPrev = !!prevVoyage;
+  const consTotals = calcVoyageTotals(voyage, shipClass); // metered fuel MT
+  const prevFuel = prevVoyage ? latestArrivalRob(prevVoyage) : {};
+  const curFuel = latestArrivalRob(voyage);
+
+  const fuelRow = (
+    key: 'hfo' | 'mgo' | 'lsfo',
+    label: string,
+  ): ReconRow => {
+    const prevRob = toNullableNum(prevFuel[key]);
+    const bunker = sumReports(voyage, (r) => r.bunkered?.[key]);
+    const consumption = consTotals[key];
+    const measured = toNullableNum(curFuel[key]);
+    const expected = prevRob == null ? null : prevRob + bunker - consumption;
+    const offset = expected == null || measured == null ? null : measured - expected;
+    return {
+      key, label, unit: 'MT',
+      prevRob, bunker, production: null, consumption,
+      expected, measured, offset,
+      withinTolerance: offset == null ? true : Math.abs(offset) <= tol.fuel,
+    };
+  };
+
+  // Water
+  const waterPrev = prevVoyage ? toNullableNum(latestArrivalFreshWaterRob(prevVoyage)) : null;
+  const waterBunker = sumReports(voyage, (r) => r.freshWater?.bunkered);
+  const waterProd = sumReports(voyage, (r) => r.freshWater?.production);
+  const waterCons = calcVoyageFreshWaterTotal(voyage);
+  const waterMeasured = toNullableNum(latestArrivalFreshWaterRob(voyage));
+  const waterExpected = waterPrev == null ? null : waterPrev + waterBunker + waterProd - waterCons;
+  const waterOffset = waterExpected == null || waterMeasured == null ? null : waterMeasured - waterExpected;
+  const waterRow: ReconRow = {
+    key: 'water', label: 'Fresh Water', unit: '',
+    prevRob: waterPrev, bunker: waterBunker, production: waterProd, consumption: waterCons,
+    expected: waterExpected, measured: waterMeasured, offset: waterOffset,
+    withinTolerance: waterOffset == null ? true : Math.abs(waterOffset) <= tol.water,
+  };
+
+  // NaOH
+  const naohPrev = prevVoyage ? toNullableNum(latestArrivalAlkaliRob(prevVoyage)) : null;
+  const naohBunker = sumReports(voyage, (r) => r.aep?.alkaliBunkered);
+  const naohCons = sumReports(voyage, (r) => r.aep?.alkaliCons);
+  const naohMeasured = toNullableNum(latestArrivalAlkaliRob(voyage));
+  const naohExpected = naohPrev == null ? null : naohPrev + naohBunker - naohCons;
+  const naohOffset = naohExpected == null || naohMeasured == null ? null : naohMeasured - naohExpected;
+  const naohRow: ReconRow = {
+    key: 'naoh', label: 'NaOH', unit: 'L',
+    prevRob: naohPrev, bunker: naohBunker, production: null, consumption: naohCons,
+    expected: naohExpected, measured: naohMeasured, offset: naohOffset,
+    withinTolerance: naohOffset == null ? true : Math.abs(naohOffset) <= tol.naoh,
+  };
+
+  return {
+    hasPrev,
+    rows: [fuelRow('hfo', 'HFO'), fuelRow('mgo', 'MGO'), fuelRow('lsfo', 'LSFO'), waterRow, naohRow],
+  };
 }
