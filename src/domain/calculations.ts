@@ -4,7 +4,7 @@
 
 import { defaultDensities } from './shipClass';
 import { sortLegsByDate } from './factories';
-import type { FuelKey, Leg, Phase, ReconcileTolerances, ShipClass, Voyage } from '../types/domain';
+import type { FuelKey, FuelStorageKey, Leg, Phase, ReconcileTolerances, ShipClass, Voyage } from '../types/domain';
 
 export const DEFAULT_RECONCILE_TOLERANCES: ReconcileTolerances = {
   fuel: 2,
@@ -20,6 +20,42 @@ export function resolveReconcileTolerances(
     water: t?.water ?? DEFAULT_RECONCILE_TOLERANCES.water,
     naoh: t?.naoh ?? DEFAULT_RECONCILE_TOLERANCES.naoh,
   };
+}
+
+// Latest non-empty ARRIVAL fuel ROB across a voyage's legs — the cruise's
+// finishing sounding. Arrival-only by design (departure ROB is the start).
+export function latestArrivalRob(
+  voyage: Pick<Voyage, 'legs'> | null | undefined,
+): Partial<Record<FuelStorageKey, string>> {
+  const hasAny = (r: Record<string, string> | undefined): boolean =>
+    !!r && (!!r.hfo || !!r.mgo || !!r.lsfo);
+  let last: Partial<Record<FuelStorageKey, string>> = {};
+  for (const leg of voyage?.legs || []) {
+    if (hasAny(leg.arrival?.rob)) last = leg.arrival!.rob;
+  }
+  return last;
+}
+
+export function latestArrivalFreshWaterRob(
+  voyage: Pick<Voyage, 'legs'> | null | undefined,
+): string {
+  let last = '';
+  for (const leg of voyage?.legs || []) {
+    const v = leg.arrival?.freshWater?.rob;
+    if (v) last = v;
+  }
+  return last;
+}
+
+export function latestArrivalAlkaliRob(
+  voyage: Pick<Voyage, 'legs'> | null | undefined,
+): string {
+  let last = '';
+  for (const leg of voyage?.legs || []) {
+    const v = leg.arrival?.aep?.alkaliRob;
+    if (v) last = v;
+  }
+  return last;
 }
 
 export interface FuelTotals {
