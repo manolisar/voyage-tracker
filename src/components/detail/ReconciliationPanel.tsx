@@ -10,7 +10,7 @@ import {
   DEFAULT_RECONCILE_TOLERANCES,
   type ReconRow,
 } from '../../domain/calculations';
-import { findPreviousEndedVoyage } from '../../contexts/voyageStore.helpers';
+import { findPreviousEndedVoyageBefore } from '../../contexts/voyageStore.helpers';
 import { getShipSettings } from '../../storage/indexeddb';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useSession } from '../../hooks/useSession';
@@ -57,7 +57,10 @@ export function ReconciliationPanel({ voyage, shipClass }: Props) {
         settings = {};
       }
       const tolv = resolveReconcileTolerances(settings?.reconcileTolerances);
-      const prevEntry = findPreviousEndedVoyage(voyages, voyage.filename);
+      const prevEntry = findPreviousEndedVoyageBefore(voyages, {
+        filename: voyage.filename,
+        startDate: voyage.startDate,
+      });
       if (!prevEntry) {
         if (alive) { setTol(tolv); setPrev(null); setState('none'); }
         return;
@@ -73,7 +76,7 @@ export function ReconciliationPanel({ voyage, shipClass }: Props) {
       }
     })();
     return () => { alive = false; };
-  }, [voyage.filename, voyages, shipId, loadVoyage]);
+  }, [voyage.filename, voyage.startDate, voyages, shipId, loadVoyage]);
 
   if (state === 'loading') {
     return (

@@ -133,6 +133,34 @@ export function findPreviousEndedVoyage(
   })[0];
 }
 
+// Like findPreviousEndedVoyage, but bounded to voyages that FINISHED on or
+// before `current` started — i.e. the cruise chronologically preceding the one
+// being viewed, not merely the globally-most-recently-ended voyage.
+//
+// The Reconciliation panel needs this distinction: opening an *older* ended
+// cruise must reconcile against the cruise immediately before IT, never a
+// later one (findPreviousEndedVoyage would wrongly return the most recent
+// ended voyage in the fleet, producing a nonsensical mass balance). Same sort
+// key + tie-break as findPreviousEndedVoyage; the `<= current.startDate` filter
+// keeps same-day turnarounds (prev END == this START) as valid predecessors.
+export function findPreviousEndedVoyageBefore(
+  voyages: VoyageManifestEntry[],
+  current: { filename: string | null; startDate: string },
+): VoyageManifestEntry | null {
+  const sortKey = (v: VoyageManifestEntry) => v.endDate || v.startDate || '';
+  const cur = current.startDate || '';
+  const candidates = voyages.filter(
+    (v) => v.ended && v.filename !== current.filename && sortKey(v) <= cur,
+  );
+  if (!candidates.length) return null;
+  return candidates.slice().sort((a, b) => {
+    const ak = sortKey(a);
+    const bk = sortKey(b);
+    if (ak !== bk) return bk.localeCompare(ak);
+    return b.filename.localeCompare(a.filename);
+  })[0];
+}
+
 export function filterVoyages(
   voyages: VoyageManifestEntry[],
   { filter, search }: VoyageListFilters,

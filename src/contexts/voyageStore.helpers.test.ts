@@ -5,6 +5,7 @@ import {
   findNextPhaseFor,
   filterVoyages,
   findPreviousEndedVoyage,
+  findPreviousEndedVoyageBefore,
   type PhaseSource,
 } from './voyageStore.helpers';
 import type { Voyage, VoyageManifestEntry } from '../types/domain';
@@ -69,6 +70,48 @@ describe('findPreviousEndedVoyage', () => {
       entry({ filename: 'old-ended.json', ended: true, startDate: '2026-01-01', endDate: '2026-01-10' }),
     ];
     expect(findPreviousEndedVoyage(list, null)?.filename).toBe('old-ended.json');
+  });
+});
+
+describe('findPreviousEndedVoyageBefore', () => {
+  const list = [
+    entry({ filename: 'jan.json', ended: true, startDate: '2026-01-01', endDate: '2026-01-10' }),
+    entry({ filename: 'feb.json', ended: true, startDate: '2026-02-01', endDate: '2026-02-10' }),
+    entry({ filename: 'mar.json', ended: true, startDate: '2026-03-01', endDate: '2026-03-10' }),
+  ];
+
+  it('returns the cruise immediately before the target, not the most recent one', () => {
+    // Viewing the Feb cruise: the baseline must be Jan, NOT Mar (which ended later).
+    const r = findPreviousEndedVoyageBefore(list, { filename: 'feb.json', startDate: '2026-02-01' });
+    expect(r?.filename).toBe('jan.json');
+  });
+
+  it('returns the latest ended cruise for the most recent voyage', () => {
+    const r = findPreviousEndedVoyageBefore(list, { filename: 'mar.json', startDate: '2026-03-01' });
+    expect(r?.filename).toBe('feb.json');
+  });
+
+  it('returns null when nothing finished before the target started', () => {
+    const r = findPreviousEndedVoyageBefore(list, { filename: 'jan.json', startDate: '2026-01-01' });
+    expect(r).toBeNull();
+  });
+
+  it('counts a same-day turnaround (prev END == this START) as the predecessor', () => {
+    const sameDay = [
+      entry({ filename: 'prev.json', ended: true, startDate: '2026-04-20', endDate: '2026-05-01' }),
+      entry({ filename: 'next.json', ended: false, startDate: '2026-05-01' }),
+    ];
+    const r = findPreviousEndedVoyageBefore(sameDay, { filename: 'next.json', startDate: '2026-05-01' });
+    expect(r?.filename).toBe('prev.json');
+  });
+
+  it('ignores ended voyages that started before but finished after the target start (overlap)', () => {
+    const overlap = [
+      entry({ filename: 'long.json', ended: true, startDate: '2026-01-01', endDate: '2026-06-01' }),
+      entry({ filename: 'target.json', ended: true, startDate: '2026-02-01', endDate: '2026-02-15' }),
+    ];
+    const r = findPreviousEndedVoyageBefore(overlap, { filename: 'target.json', startDate: '2026-02-01' });
+    expect(r).toBeNull();
   });
 });
 
