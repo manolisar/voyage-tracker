@@ -78,7 +78,7 @@ interface ReconRow {
   expected: number | null;  // null when prevRob is null
   measured: number | null;  // null when this cruise has no end sounding
   offset: number | null;    // null when expected or measured is null
-  withinTolerance: boolean;  // |offset| <= pct * expected
+  withinTolerance: boolean;  // |offset| <= tolerance (absolute, resource unit)
 }
 ```
 
@@ -101,16 +101,22 @@ cruise, only that row degrades to `—`; the others still compute.
 
 ## Tolerances + Settings
 
-`withinTolerance = expected != null && |offset| <= (pct/100) * |expected|`.
-Base is the **expected end-ROB** (the predicted level); when `expected` is 0,
-the row is treated as within tolerance (nothing to measure against).
+Tolerance is an **absolute numeric offset**, entered directly (not a percentage):
+
+`withinTolerance = offset == null || |offset| <= tolerance`.
+
+Each tolerance is in the resource's own unit, so the comparison is
+unit-consistent. One knob covers all three fuels (shared MT scale).
 
 ```ts
 interface ReconcileTolerances {
-  fuelPct: number;   // default 1   — applies to HFO/MGO/LSFO
-  otherPct: number;  // default 3   — applies to Fresh Water + NaOH
+  fuel: number;   // MT — applies to HFO/MGO/LSFO. default 2
+  water: number;  // fresh-water unit.           default 5
+  naoh: number;   // L.                           default 10
 }
 ```
+
+Defaults are starting points; the chief tunes them in Settings.
 
 Persisted per-ship in the existing IndexedDB ship-settings store, alongside
 `defaultDensities`:
@@ -118,12 +124,13 @@ Persisted per-ship in the existing IndexedDB ship-settings store, alongside
 - `src/storage/indexeddb.ts` — `ShipSettings` gains
   `reconcileTolerances?: ReconcileTolerances`.
 - `getShipSettings` returns it; `putShipSettings` already merges arbitrary keys.
-- Defaults applied at read time when absent (`fuelPct: 1`, `otherPct: 3`).
+- Defaults applied at read time when absent (`fuel: 2`, `water: 5`, `naoh: 10`).
 
 Settings UI (`SettingsPanel.tsx`): a new "Reconciliation tolerance" block, same
-layout idiom as the densities block — two numeric inputs (Fuel %, Other %),
-Save + Reset-to-default buttons, validated as finite and > 0. Saving writes the
-ship settings; the open Reconciliation panel re-reads on next render.
+layout idiom as the densities block — three numeric inputs (Fuel MT, Fresh
+Water, NaOH L), Save + Reset-to-default buttons, validated as finite and >= 0.
+Saving writes the ship settings; the open Reconciliation panel re-reads on next
+render.
 
 ## UI: Reconciliation panel
 
@@ -176,8 +183,7 @@ double-stores data already in the arrival report.
 
 - `calcReconciliation` unit tests: happy path (all resources, known numbers),
   no-prev-voyage (all null), missing-sounding-on-one-resource, multi-leg bunker
-  + production summation, tolerance boundary (just inside / just outside),
-  zero-expected guard.
+  + production summation, tolerance boundary (just inside / just outside).
 - `latestArrivalRob` / fresh-water / NaOH variants: skip all-empty ROB objects
   (the bug `lastReportRob` already guards against).
 - Tolerance default resolution when ship settings absent.
@@ -187,6 +193,6 @@ double-stores data already in the arrival report.
 ## Out of scope (v1)
 
 - Running multi-cruise trend table (explicitly deferred; per-cruise panel first).
-- Tolerance as absolute units (we use %).
+- Percentage / throughput-relative tolerances (we use absolute numeric offsets).
 - Per-fuel separate tolerances (one Fuel knob covers all three).
 - Reconciling intermediate legs (only cruise-finish → cruise-finish).
