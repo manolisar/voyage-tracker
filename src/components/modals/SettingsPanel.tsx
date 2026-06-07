@@ -32,16 +32,17 @@ import {
   importBundle,
 } from '../../storage/local/exportImport';
 import { defaultDensities } from '../../domain/shipClass';
+import { DEFAULT_RECONCILE_TOLERANCES, resolveReconcileTolerances } from '../../domain/calculations';
 import { getShipSettings, putShipSettings } from '../../storage/indexeddb';
 import { Download, Folder, Settings, Upload, X } from '../Icons';
-import type { FuelKey, ShipClass } from '../../types/domain';
+import type { FuelKey, ReconcileTolerances, ShipClass } from '../../types/domain';
 
 interface Props {
   shipClass: ShipClass | null;
   onClose: () => void;
 }
 
-type BusyState = 'folder' | 'export' | 'import' | 'densities' | null;
+type BusyState = 'folder' | 'export' | 'import' | 'densities' | 'tolerances' | null;
 
 export function SettingsPanel({ shipClass, onClose }: Props) {
   const { shipId, userName, role } = useSession();
@@ -79,6 +80,27 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
     // baseline is derived from shipClass; depending on shipClass.id is enough.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shipId, shipClass?.id]);
+
+  // Reconciliation tolerance editor — per-resource absolute offsets below
+  // which counter-vs-sounding mismatches are treated as normal noise.
+  const [tol, setTol] = useState<Record<keyof ReconcileTolerances, string>>({
+    fuel: String(DEFAULT_RECONCILE_TOLERANCES.fuel),
+    water: String(DEFAULT_RECONCILE_TOLERANCES.water),
+    naoh: String(DEFAULT_RECONCILE_TOLERANCES.naoh),
+  });
+  const [tolDirty, setTolDirty] = useState(false);
+  useEffect(() => {
+    if (!shipId) return undefined;
+    let alive = true;
+    (async () => {
+      const settings = await getShipSettings(shipId);
+      if (!alive) return;
+      const r = resolveReconcileTolerances(settings?.reconcileTolerances);
+      setTol({ fuel: String(r.fuel), water: String(r.water), naoh: String(r.naoh) });
+      setTolDirty(false);
+    })();
+    return () => { alive = false; };
+  }, [shipId]);
 
   const dialogRef = useRef<HTMLDivElement>(null);
   useFocusTrap(dialogRef, { onEscape: onClose, disabled: !!busy });
@@ -202,6 +224,43 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
     }
   }
 
+  function handleTolChange(key: keyof ReconcileTolerances, raw: string) {
+    setTol((prev) => ({ ...prev, [key]: raw }));
+    setTolDirty(true);
+  }
+
+  function handleTolReset() {
+    setTol({
+      fuel: String(DEFAULT_RECONCILE_TOLERANCES.fuel),
+      water: String(DEFAULT_RECONCILE_TOLERANCES.water),
+      naoh: String(DEFAULT_RECONCILE_TOLERANCES.naoh),
+    });
+    setTolDirty(true);
+  }
+
+  async function handleTolSave() {
+    if (!shipId) return;
+    const parsed: Record<string, number> = {};
+    for (const key of ['fuel', 'water', 'naoh'] as const) {
+      const n = Number(tol[key]);
+      if (!Number.isFinite(n) || n < 0) {
+        toast.addToast(`Invalid ${key} tolerance`, 'error');
+        return;
+      }
+      parsed[key] = n;
+    }
+    setBusy('tolerances');
+    try {
+      await putShipSettings(shipId, { reconcileTolerances: parsed as unknown as ReconcileTolerances });
+      setTolDirty(false);
+      toast.addToast('Reconciliation tolerances saved', 'success');
+    } catch (e) {
+      toast.addToast((e as Error).message || 'Could not save tolerances', 'error');
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const disabled = busy !== null;
 
   return (
@@ -311,6 +370,49 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
               </div>
             </div>
           )}
+
+          <div className="flex items-start gap-3 min-w-0">
+            <span className="mt-0.5 flex-shrink-0" style={{ color: 'var(--color-dim)' }} aria-hidden="true">
+              <Settings className="w-4 h-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                Reconciliation tolerance
+              </div>
+              <div className="text-xs mt-0.5" style={{ color: 'var(--color-dim)' }}>
+                Offset (counter vs sounding) below this is treated as normal noise. Absolute units.
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-3">
+                {([['fuel', 'Fuel (MT)'], ['water', 'Fresh Water'], ['naoh', 'NaOH (L)']] as const).map(
+                  ([key, label]) => (
+                    <label key={key} className="flex flex-col gap-1">
+                      <span className="form-label">{label}</span>
+                      <input
+                        type="number" inputMode="decimal" step="0.1" min="0"
+                        className="form-input font-mono"
+                        value={tol[key]} disabled={disabled}
+                        onChange={(e) => handleTolChange(key, e.target.value)}
+                      />
+                    </label>
+                  ),
+                )}
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button" className="btn-primary px-3 py-1.5 rounded-lg text-xs"
+                  disabled={disabled || !tolDirty} onClick={handleTolSave}
+                >
+                  {busy === 'tolerances' ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  type="button" className="btn-flat px-3 py-1.5 rounded-lg text-xs"
+                  disabled={disabled} onClick={handleTolReset} title="Reset to defaults"
+                >
+                  Reset to defaults
+                </button>
+              </div>
+            </div>
+          </div>
 
           <Row
             icon={<Download className="w-4 h-4" />}
