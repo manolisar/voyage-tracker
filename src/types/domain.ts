@@ -128,3 +128,9 @@ export interface Selection {
   kind: SelectionKind;
   legId?: number;
 }
+
+export interface ReconcileTolerances {
+  fuel: number;  // MT — applies to HFO/MGO/LSFO
+  water: number; // fresh-water unit
+  naoh: number;  // L
+}

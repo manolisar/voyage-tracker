@@ -4,7 +4,23 @@
 
 import { defaultDensities } from './shipClass';
 import { sortLegsByDate } from './factories';
-import type { FuelKey, Leg, Phase, ShipClass, Voyage } from '../types/domain';
+import type { FuelKey, Leg, Phase, ReconcileTolerances, ShipClass, Voyage } from '../types/domain';
+
+export const DEFAULT_RECONCILE_TOLERANCES: ReconcileTolerances = {
+  fuel: 2,
+  water: 5,
+  naoh: 10,
+};
+
+export function resolveReconcileTolerances(
+  t?: Partial<ReconcileTolerances> | null,
+): ReconcileTolerances {
+  return {
+    fuel: t?.fuel ?? DEFAULT_RECONCILE_TOLERANCES.fuel,
+    water: t?.water ?? DEFAULT_RECONCILE_TOLERANCES.water,
+    naoh: t?.naoh ?? DEFAULT_RECONCILE_TOLERANCES.naoh,
+  };
+}
 
 export interface FuelTotals {
   hfo: number;

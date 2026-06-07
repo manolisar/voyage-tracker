@@ -24,7 +24,7 @@
 //                 from Settings (currently: default fuel densities). Applied
 //                 at voyage creation on top of the shipClass baseline.
 
-import type { FuelKey, PortRef, Voyage } from '../types/domain';
+import type { FuelKey, PortRef, ReconcileTolerances, Voyage } from '../types/domain';
 import type { EditorRole } from '../domain/constants';
 import { createLogger } from '../util/log';
 
@@ -64,6 +64,7 @@ export interface ShipSettings {
   // at voyage creation time on top of the class baseline. The key matches
   // what's persisted on disk in IDB.
   defaultDensities?: Partial<Record<FuelKey, number>>;
+  reconcileTolerances?: ReconcileTolerances;
   [key: string]: unknown;
 }
 
