@@ -3,7 +3,7 @@
 // is installed by VoyageStoreProvider at module load (local File System
 // Access backend, see src/storage/local/).
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from '../../hooks/useSession';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
 import { useModalOpenCount } from '../../hooks/useFocusTrap';
@@ -33,6 +33,31 @@ export function AppShell() {
   const [ship, setShip] = useState<Ship | null>(null);
   const [shipClass, setShipClass] = useState<ShipClass | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Sidebar width is user-resizable (drag handle between tree and detail).
+  // Persisted in localStorage so each PC keeps its preferred tree width.
+  const SIDEBAR_MIN = 240;
+  const SIDEBAR_MAX = 600;
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    try {
+      const v = Number(localStorage.getItem('vt.sidebarWidth'));
+      return v >= SIDEBAR_MIN && v <= SIDEBAR_MAX ? v : 320;
+    } catch {
+      return 320;
+    }
+  });
+  // While dragging the handle we suppress the width transition so the pane
+  // tracks the cursor instead of easing behind it.
+  const [resizingSidebar, setResizingSidebar] = useState(false);
+
+  const setSidebarWidthClamped = useCallback((w: number) => {
+    const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, Math.round(w)));
+    setSidebarWidth(next);
+    try {
+      localStorage.setItem('vt.sidebarWidth', String(next));
+    } catch {
+      /* localStorage unavailable — keep in-memory width only */
+    }
+  }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [newVoyageOpen, setNewVoyageOpen] = useState(false);
@@ -65,12 +90,12 @@ export function AppShell() {
 
   const sidebarStyle = useMemo(
     () => ({
-      width: sidebarOpen ? 320 : 0,
-      transition: 'width 0.2s ease',
+      width: sidebarOpen ? sidebarWidth : 0,
+      transition: resizingSidebar ? 'none' : 'width 0.2s ease',
       borderColor: 'var(--color-border-subtle)',
       background: 'var(--color-surface)',
     }),
-    [sidebarOpen],
+    [sidebarOpen, sidebarWidth, resizingSidebar],
   );
 
   // Global keyboard shortcuts. `/` focuses the tree search input; Ctrl/Cmd+B
@@ -112,6 +137,10 @@ export function AppShell() {
         shipClass={shipClass}
         sidebarOpen={sidebarOpen}
         sidebarStyle={sidebarStyle}
+        sidebarWidth={sidebarWidth}
+        onResizeSidebar={setSidebarWidthClamped}
+        onResizeStart={() => setResizingSidebar(true)}
+        onResizeEnd={() => setResizingSidebar(false)}
         editMode={editMode}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         onEnableEdit={enterEditMode}
@@ -150,6 +179,10 @@ interface AppShellInnerProps {
   shipClass: ShipClass | null;
   sidebarOpen: boolean;
   sidebarStyle: React.CSSProperties;
+  sidebarWidth: number;
+  onResizeSidebar: (width: number) => void;
+  onResizeStart: () => void;
+  onResizeEnd: () => void;
   editMode: boolean;
   onToggleSidebar: () => void;
   onEnableEdit: () => void;
@@ -177,7 +210,8 @@ interface AppShellInnerProps {
 }
 
 function AppShellInner({
-  ship, shipClass, sidebarOpen, sidebarStyle, editMode,
+  ship, shipClass, sidebarOpen, sidebarStyle, sidebarWidth,
+  onResizeSidebar, onResizeStart, onResizeEnd, editMode,
   onToggleSidebar, onEnableEdit, onNewVoyage, onOpenSettings, onOpenHelp,
   onAddLeg, onEndVoyage, onDeleteVoyage, onDeleteLeg,
   settingsOpen, helpOpen, newVoyageOpen,
@@ -218,12 +252,23 @@ function AppShellInner({
 
         <div className="flex flex-1 min-h-0">
           <nav
-            className="border-r overflow-hidden shrink-0 hidden md:flex flex-col"
+            className="overflow-hidden shrink-0 hidden md:flex flex-col"
             style={sidebarStyle}
             aria-label="Voyages"
           >
             {sidebarOpen && <VoyageTree />}
           </nav>
+
+          {sidebarOpen && (
+            <SidebarResizer
+              width={sidebarWidth}
+              min={240}
+              max={600}
+              onResize={onResizeSidebar}
+              onResizeStart={onResizeStart}
+              onResizeEnd={onResizeEnd}
+            />
+          )}
 
           <main id="main-content" className="flex-1 min-h-0 overflow-y-auto p-6 md:p-8" tabIndex={-1}>
             <DetailPane
@@ -374,6 +419,86 @@ function NewVoyageFlow({
         />
       )}
     </>
+  );
+}
+
+// SidebarResizer — thin drag handle between the tree and the detail pane.
+// Mouse-drag adjusts the sidebar width (clamped by the parent); ArrowLeft /
+// ArrowRight nudge it for keyboard users. It only renders on md+ (the sidebar
+// is a full-width drawer below 900px, where resizing makes no sense).
+function SidebarResizer({
+  width,
+  min,
+  max,
+  onResize,
+  onResizeStart,
+  onResizeEnd,
+}: {
+  width: number;
+  min: number;
+  max: number;
+  onResize: (width: number) => void;
+  onResizeStart: () => void;
+  onResizeEnd: () => void;
+}) {
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  const startW = useRef(width);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragging.current) return;
+      onResize(startW.current + (e.clientX - startX.current));
+    };
+    const onUp = () => {
+      if (!dragging.current) return;
+      dragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      onResizeEnd();
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [onResize, onResizeEnd]);
+
+  const begin = (e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = true;
+    startX.current = e.clientX;
+    startW.current = width;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    onResizeStart();
+  };
+
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      onResize(Math.max(min, width - 16));
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      onResize(Math.min(max, width + 16));
+    }
+  };
+
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize sidebar"
+      aria-valuenow={width}
+      aria-valuemin={min}
+      aria-valuemax={max}
+      tabIndex={0}
+      onMouseDown={begin}
+      onKeyDown={onKey}
+      className="sidebar-resizer hidden md:block shrink-0"
+      title="Drag to resize the sidebar"
+    />
   );
 }
 

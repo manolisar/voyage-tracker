@@ -49,6 +49,10 @@
   --color-water-band: #38BDF8;
   --color-water-border: #BAE6FD;
 
+  /* Hours & Distance — teal, kept clear of Fresh Water's sky-blue */
+  --color-hours: #0D9488;
+  --color-hours-band: #2DD4BF;
+
   --color-chem: #DB2777;
   --color-chem-light: #FDF2F8;
   --color-chem-band: #F472B6;
@@ -539,6 +543,29 @@ h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Manrope', sans-serif; }
 .cat-card.water .cat-label { color: var(--color-water); }
 .dark .cat-card.water { background: rgba(56,189,248,0.05); }
 .dark .cat-card.water .cat-label { color: var(--color-water-band); }
+
+/* Sidebar resize handle — sits between the tree and detail panes. Thin,
+   transparent by default, lights up on hover/focus to signal it's draggable. */
+.sidebar-resizer {
+  width: 6px;
+  align-self: stretch;
+  cursor: col-resize;
+  background: transparent;
+  border-right: 1px solid var(--color-border-subtle);
+  transition: background 0.15s ease;
+}
+.sidebar-resizer:hover,
+.sidebar-resizer:focus-visible {
+  background: var(--color-ocean-500);
+  outline: none;
+}
+
+/* Hours & Distance — teal, distinct from Water's sky-blue */
+.cat-card.hours { background: rgba(13,148,136,0.04); }
+.cat-card.hours::after { background: var(--color-hours-band); }
+.cat-card.hours .cat-label { color: var(--color-hours); }
+.dark .cat-card.hours { background: rgba(45,212,191,0.05); }
+.dark .cat-card.hours .cat-label { color: var(--color-hours-band); }
 
 /* Chemicals */
 .cat-card.chem { background: rgba(219,39,119,0.04); }

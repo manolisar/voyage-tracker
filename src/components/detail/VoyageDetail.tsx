@@ -26,6 +26,14 @@ const FUEL_COLS: { key: keyof FuelTotals & string; label: FuelKey }[] = [
   { key: 'lsfo', label: 'LSFO' },
 ];
 
+// Per-fuel font colors for the Fuel by Mode matrix — matches the HFO/MGO/LSFO
+// flag-band identity used on the report rows (see EquipmentRow).
+const FUEL_TEXT: Record<string, string> = {
+  hfo:  'var(--color-hfo)',
+  mgo:  'var(--color-mgo)',
+  lsfo: 'var(--color-lsfo)',
+};
+
 function lastReportRob(voyage: Voyage): Record<string, string> {
   // Walk legs in order; pick the latest arrival ROB, falling back to last
   // departure ROB. Used for the "ROB" hint on the fuel summary cards.
@@ -282,7 +290,7 @@ export function VoyageDetail({
       <CollapsibleSection id="operatingProfile" title="Operating Profile" defaultCollapsed>
       <section className="grid grid-cols-1 md:grid-cols-3 gap-[14px]">
         {/* Fuel by Mode matrix */}
-        <div className="cat-card fuel md:col-span-3">
+        <div className="cat-card fuel md:col-span-2">
           <div className="cat-label">
             Fuel by Mode
             <span className="ml-auto font-mono text-[0.65rem] font-semibold" style={{ color: 'var(--color-dim)' }}>
@@ -302,8 +310,8 @@ export function VoyageDetail({
               </thead>
               <tbody>
                 {FUEL_COLS.map(({ key, label }) => (
-                  <tr key={key} style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
-                    <th scope="row" className="text-left py-1" style={{ color: 'var(--color-dim)' }}>{label}</th>
+                  <tr key={key} style={{ borderTop: '1px solid var(--color-border-subtle)', color: FUEL_TEXT[key] }}>
+                    <th scope="row" className="text-left py-1 font-bold" style={{ color: FUEL_TEXT[key] }}>{label}</th>
                     <td className="text-right py-1 px-2">{formatMT(fuelByMode.sailing[key])}</td>
                     <td className="text-right py-1 px-2">{formatMT(fuelByMode.port[key])}</td>
                     <td className="text-right py-1 px-2">{formatMT(fuelByMode.standby[key])}</td>
@@ -326,8 +334,17 @@ export function VoyageDetail({
           </div>
         </div>
 
-        {/* Hours & Distance */}
-        <div className="cat-card water md:col-span-2">
+        {/* Boiler Fuel — squeezed beside Fuel by Mode */}
+        <div className="cat-card fuel">
+          <div className="cat-label">Boiler Fuel</div>
+          <div className="cat-body">
+            <Mini label="Sailing" value={formatMT(boilerByMode.sailing)} suffix="MT" />
+            <Mini label="In Port" value={formatMT(boilerByMode.port)} suffix="MT" />
+          </div>
+        </div>
+
+        {/* Hours & Distance — teal band, distinct from Fresh Water's sky-blue */}
+        <div className="cat-card hours md:col-span-2">
           <div className="cat-label">Hours &amp; Distance</div>
           <div className="cat-body">
             <Mini label="Sailed" value={`${fmtMiles(distanceTime.sailedMiles)} nm · ${formatHours(distanceTime.sailedHours)} h`} />
@@ -339,17 +356,8 @@ export function VoyageDetail({
           </div>
         </div>
 
-        {/* Boiler Fuel */}
-        <div className="cat-card fuel">
-          <div className="cat-label">Boiler Fuel</div>
-          <div className="cat-body">
-            <Mini label="Sailing" value={formatMT(boilerByMode.sailing)} suffix="MT" />
-            <Mini label="In Port" value={formatMT(boilerByMode.port)} suffix="MT" />
-          </div>
-        </div>
-
-        {/* AEP Loop Hours */}
-        <div className="cat-card chem md:col-span-3">
+        {/* AEP Loop Hours — squeezed beside Hours & Distance */}
+        <div className="cat-card chem">
           <div className="cat-label">AEP Loop Hours</div>
           <div className="cat-body">
             <Mini label="Open Loop"   value={formatHours(loopHours.openHours)}   suffix="h" />

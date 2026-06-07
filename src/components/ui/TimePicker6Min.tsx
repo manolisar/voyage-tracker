@@ -108,10 +108,17 @@ export function TimePicker6Min({ value, onChange, readOnly = false }: Props) {
     <div
       className="form-input font-mono text-[0.78rem]"
       style={{
-        padding: '0.25rem 0.5rem',
+        padding: '0.25rem 0.4rem',
         display: 'flex',
         alignItems: 'center',
         gap: '0.1rem',
+        // Keep the two selects inside the field's border as the column
+        // narrows: clip to the box and let the flex children shrink below
+        // their intrinsic content width (min-width: 0 on each select).
+        minWidth: 0,
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
       }}
       onClick={(e) => e.stopPropagation()}
     >
@@ -120,14 +127,22 @@ export function TimePicker6Min({ value, onChange, readOnly = false }: Props) {
         onChange={(e) => pickHour(e.target.value)}
         aria-label="Hour"
         style={{
+          // appearance:none strips the native dropdown chevron so the two
+          // selects pack tightly and stay inside the field as it narrows.
+          appearance: 'none',
+          WebkitAppearance: 'none',
+          MozAppearance: 'none',
           border: 'none',
           background: 'transparent',
           color: 'var(--color-text)',
-          padding: '0.25rem 0.1rem',
+          padding: '0.25rem 0',
           fontSize: '0.85rem',
           fontFamily: 'inherit',
           cursor: 'pointer',
           outline: 'none',
+          textAlign: 'center',
+          flex: '1 1 0',
+          minWidth: 0,
         }}
       >
         <option value="">--</option>
@@ -135,20 +150,26 @@ export function TimePicker6Min({ value, onChange, readOnly = false }: Props) {
           <option key={h} value={pad2(h)}>{pad2(h)}</option>
         ))}
       </select>
-      <span style={{ color: 'var(--color-faint)' }}>:</span>
+      <span style={{ color: 'var(--color-faint)', flex: '0 0 auto' }}>:</span>
       <select
         value={mPart}
         onChange={(e) => pickMinute(e.target.value)}
         aria-label="Minute"
         style={{
+          appearance: 'none',
+          WebkitAppearance: 'none',
+          MozAppearance: 'none',
           border: 'none',
           background: 'transparent',
           color: 'var(--color-text)',
-          padding: '0.25rem 0.1rem',
+          padding: '0.25rem 0',
           fontSize: '0.85rem',
           fontFamily: 'inherit',
           cursor: 'pointer',
           outline: 'none',
+          textAlign: 'center',
+          flex: '1 1 0',
+          minWidth: 0,
         }}
       >
         <option value="">--</option>
