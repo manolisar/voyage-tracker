@@ -384,7 +384,7 @@ describe('calcDistanceTime', () => {
 });
 
 describe('calcLoopHours', () => {
-  it('sums open/closed loop HH:MM across departure + arrival of every leg', () => {
+  it('differentiates sea (arrival) from in-port (departure) loop hours', () => {
     const voyage = {
       legs: [
         {
@@ -398,13 +398,21 @@ describe('calcLoopHours', () => {
       ],
     };
     const l = calcLoopHours(voyage as unknown as Voyage);
-    expect(l.openHours).toBeCloseTo(30.5, 2);   // 10 + 8.5 + 12
-    expect(l.closedHours).toBeCloseTo(6.5, 2);  // 2.5 + 1 + 3
+    // sea open = arrival opens (8.5 + 0) + legacy departure opens folded (10 + 12)
+    expect(l.seaOpenHours).toBeCloseTo(30.5, 2);
+    // sea closed = arrival closes only (1 + 3)
+    expect(l.seaClosedHours).toBeCloseTo(4.0, 2);
+    // port closed = departure closes only (2.5 + 0)
+    expect(l.portClosedHours).toBeCloseTo(2.5, 2);
   });
 
   it('returns zeros on empty voyage / missing aep', () => {
-    expect(calcLoopHours({ legs: [] } as unknown as Voyage)).toEqual({ openHours: 0, closedHours: 0 });
+    expect(calcLoopHours({ legs: [] } as unknown as Voyage)).toEqual({
+      seaOpenHours: 0, seaClosedHours: 0, portClosedHours: 0,
+    });
     const v = { legs: [{ departure: {}, arrival: {} }] };
-    expect(calcLoopHours(v as unknown as Voyage)).toEqual({ openHours: 0, closedHours: 0 });
+    expect(calcLoopHours(v as unknown as Voyage)).toEqual({
+      seaOpenHours: 0, seaClosedHours: 0, portClosedHours: 0,
+    });
   });
 });

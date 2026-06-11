@@ -343,23 +343,38 @@ export function calcDistanceTime(
   return out;
 }
 
-// Sum AEP Open/Closed loop hours (entered HH:MM per report) across both reports
-// of every leg. Returns decimal hours.
+// Sum AEP Open/Closed loop hours (entered HH:MM per report) across every leg,
+// differentiating sea passage from in-port scrubbing. Returns decimal hours.
+//
+//   - Sea passage scrubbing lives on the ARRIVAL report (open + closed at sea).
+//   - In-port closed-loop scrubbing lives on the DEPARTURE report (received/run
+//     alongside). Open loop is banned alongside in most ports, so there is no
+//     "port open" bucket; any legacy departure open-loop value is folded into
+//     sea-open since open loop only ever happens underway.
 export function calcLoopHours(
   voyage: Pick<Voyage, 'legs'> | null | undefined,
-): { openHours: number; closedHours: number } {
-  let openMins = 0;
-  let closedMins = 0;
-  if (!voyage?.legs) return { openHours: 0, closedHours: 0 };
+): { seaOpenHours: number; seaClosedHours: number; portClosedHours: number } {
+  let seaOpenMins = 0;
+  let seaClosedMins = 0;
+  let portClosedMins = 0;
+  if (!voyage?.legs) return { seaOpenHours: 0, seaClosedHours: 0, portClosedHours: 0 };
   for (const leg of voyage.legs) {
-    for (const report of [leg.departure, leg.arrival]) {
-      const o = parseHHMMToMinutes(report?.aep?.openLoopHrs);
-      const c = parseHHMMToMinutes(report?.aep?.closedLoopHrs);
-      if (o != null) openMins += o;
-      if (c != null) closedMins += c;
-    }
+    const aOpen = parseHHMMToMinutes(leg.arrival?.aep?.openLoopHrs);
+    const aClosed = parseHHMMToMinutes(leg.arrival?.aep?.closedLoopHrs);
+    if (aOpen != null) seaOpenMins += aOpen;
+    if (aClosed != null) seaClosedMins += aClosed;
+
+    const dClosed = parseHHMMToMinutes(leg.departure?.aep?.closedLoopHrs);
+    if (dClosed != null) portClosedMins += dClosed;
+    // Legacy: open loop only happens at sea — fold any departure open-loop in.
+    const dOpen = parseHHMMToMinutes(leg.departure?.aep?.openLoopHrs);
+    if (dOpen != null) seaOpenMins += dOpen;
   }
-  return { openHours: openMins / 60, closedHours: closedMins / 60 };
+  return {
+    seaOpenHours: seaOpenMins / 60,
+    seaClosedHours: seaClosedMins / 60,
+    portClosedHours: portClosedMins / 60,
+  };
 }
 
 export interface ReconRow {

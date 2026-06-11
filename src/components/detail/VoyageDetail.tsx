@@ -361,8 +361,9 @@ export function VoyageDetail({
         <div className="cat-card chem">
           <div className="cat-label">AEP Loop Hours</div>
           <div className="cat-body">
-            <Mini label="Open Loop"   value={formatHours(loopHours.openHours)}   suffix="h" />
-            <Mini label="Closed Loop" value={formatHours(loopHours.closedHours)} suffix="h" />
+            <Mini label="Sea · Open Loop"    value={formatHours(loopHours.seaOpenHours)}    suffix="h" />
+            <Mini label="Sea · Closed Loop"  value={formatHours(loopHours.seaClosedHours)}  suffix="h" />
+            <Mini label="Port · Closed Loop" value={formatHours(loopHours.portClosedHours)} suffix="h" />
           </div>
         </div>
       </section>

@@ -271,9 +271,9 @@ export function ReportForm({ report, onChange, densities, shipClass, readOnly = 
             </div>
           </div>
 
-          {/* Departure: Fuel ROB + Fuel Bunkered + Fresh Water Bunkered */}
+          {/* Departure: Fuel ROB + Fuel Bunkered + Fresh Water Bunkered + AEP (port) */}
           {isDeparture && (
-            <div className="grid grid-cols-3 gap-4 mt-5">
+            <div className="grid grid-cols-4 gap-4 mt-5">
               <FuelInputCard
                 title="Fuel R.O.B. (MT)"
                 values={report.rob}
@@ -297,6 +297,31 @@ export function ReportForm({ report, onChange, densities, shipClass, readOnly = 
                       <input type="number" step="0.1" value={report.freshWater.bunkered}
                         onChange={(e) => onChange({ ...report, freshWater: { ...report.freshWater, bunkered: e.target.value }})}
                         className="flex-1 min-w-0 form-input font-mono text-[0.78rem]" />
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="cat-card chem" style={{ gridColumn: 'unset' }}>
+                <div className="cat-label">AEP / Alkali</div>
+                <div className="cat-body space-y-2">
+                  <div>
+                    <label className="form-label">Closed Loop in Port (hh:mm)</label>
+                    {readOnly ? (
+                      <ReadOnlyField value={report.aep?.closedLoopHrs} mono smaller />
+                    ) : (
+                      <input type="text" value={report.aep.closedLoopHrs} placeholder="00:00"
+                        onChange={(e) => onChange({ ...report, aep: { ...report.aep, closedLoopHrs: e.target.value }})}
+                        className="form-input font-mono text-[0.72rem]" />
+                    )}
+                  </div>
+                  <div>
+                    <label className="form-label">NaOH Bunkered (L)</label>
+                    {readOnly ? (
+                      <ReadOnlyField value={report.aep?.alkaliBunkered} mono smaller />
+                    ) : (
+                      <input type="number" step="0.1" value={report.aep.alkaliBunkered}
+                        onChange={(e) => onChange({ ...report, aep: { ...report.aep, alkaliBunkered: e.target.value }})}
+                        className="form-input font-mono text-[0.72rem]" />
                     )}
                   </div>
                 </div>
@@ -377,16 +402,21 @@ export function ReportForm({ report, onChange, densities, shipClass, readOnly = 
                       )}
                     </div>
                   </div>
-                  <div>
-                    <label className="form-label">NaOH Bunkered (L)</label>
-                    {readOnly ? (
-                      <ReadOnlyField value={report.aep?.alkaliBunkered} mono smaller />
-                    ) : (
-                      <input type="number" step="0.1" value={report.aep.alkaliBunkered}
-                        onChange={(e) => onChange({ ...report, aep: { ...report.aep, alkaliBunkered: e.target.value }})}
-                        className="form-input font-mono text-[0.72rem]" />
-                    )}
-                  </div>
+                  {/* NaOH Bunkered now lives on the Departure report (received in port).
+                      Shown here only when a legacy arrival file still carries a value,
+                      so it stays visible/clearable instead of silently feeding Reconciliation. */}
+                  {Boolean(report.aep?.alkaliBunkered) && (
+                    <div>
+                      <label className="form-label">NaOH Bunkered (L) — legacy</label>
+                      {readOnly ? (
+                        <ReadOnlyField value={report.aep?.alkaliBunkered} mono smaller />
+                      ) : (
+                        <input type="number" step="0.1" value={report.aep.alkaliBunkered}
+                          onChange={(e) => onChange({ ...report, aep: { ...report.aep, alkaliBunkered: e.target.value }})}
+                          className="form-input font-mono text-[0.72rem]" />
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -129,7 +129,7 @@ Nothing in the app enforces these partitions — they're workflow convention. An
 
 **Lub-oil:** recorded **only** at End Voyage (one entry per voyage), NOT in departure/arrival reports.
 
-**NaOH bunkering:** the arrival report's AEP/Alkali block carries `aep.alkaliBunkered` (L) alongside `alkaliCons` / `alkaliRob`, so chemical top-ups close the Reconciliation mass balance (see §6) the same way fuel `bunkered` and `freshWater.bunkered` do. Legacy files without the field read as `''`.
+**NaOH bunkering:** the **departure** report carries an AEP/Alkali card with `aep.alkaliBunkered` (L) — NaOH is received in port, so it's logged alongside fuel/fresh-water bunkering — plus `aep.closedLoopHrs` for closed-loop scrubber hours during the port stay. The arrival report's AEP/Alkali block keeps `openLoopHrs`/`closedLoopHrs` (sea passage) and `alkaliCons`/`alkaliRob`. Chemical top-ups close the Reconciliation mass balance (see §6) the same way fuel `bunkered` and `freshWater.bunkered` do; `calcReconciliation` sums `alkaliBunkered` across both reports of every leg, so the bunkering move was data-transparent. `calcLoopHours` (Operating Profile) splits loop hours by sea vs port — see §6. Legacy arrival files that still carry `alkaliBunkered` show it on the arrival card as a "legacy" field (visible/clearable) until emptied; files without the field read as `''`.
 
 This is data-driven via `public/ship-classes/solstice-class.json` so adding a new ship class later = drop a new JSON file.
 
@@ -187,8 +187,13 @@ new inputs — by four pure functions in [src/domain/calculations.ts](src/domain
   Report** (Bridge-owned nav events) and fall back to engine-report
   `timeEvents`; dates come from the engine reports. The first departure and
   final arrival have no pairing, so their alongside time is excluded by design.
-- **AEP Loop Hours** (`calcLoopHours`) — sums `aep.openLoopHrs` /
-  `closedLoopHrs` (HH:MM) across both reports of every leg.
+- **AEP Loop Hours** (`calcLoopHours`) — sums `aep` loop hours (HH:MM) across
+  every leg, differentiating **sea** from **port**: sea open + sea closed come
+  from the **arrival** report (sea passage), port closed comes from the
+  **departure** `closedLoopHrs` (in-port scrubbing). Open loop is banned
+  alongside in most ports, so there is no port-open bucket — any legacy
+  departure open-loop value folds into sea-open. Returns
+  `{ seaOpenHours, seaClosedHours, portClosedHours }`.
 
 Durations display as **decimal hours** (1 dp); fuel as MT (2 dp). Helpers
 `parseHHMMToMinutes` (allows elapsed >24 h) and `formatHours` are exported from
@@ -204,8 +209,12 @@ each resource it computes, via `calcReconciliation` in
 `expected = prevCruiseEndROB + bunkering (+ fresh-water production) − metered
 consumption`, then `offset = measuredEndROB − expected`. Rows: HFO/MGO/LSFO
 (MT), Fresh Water, NaOH (L). The baseline (`prevCruiseEndROB`) is the latest
-non-empty **arrival** ROB of the previous **ended** cruise, loaded on demand via
-`findPreviousEndedVoyage` + `loadVoyage` ([src/components/detail/ReconciliationPanel.tsx](src/components/detail/ReconciliationPanel.tsx)).
+non-empty **arrival** ROB of the **chronologically-previous** ended cruise — the
+latest ended voyage that finished on or before the viewed cruise started, via
+`findPreviousEndedVoyageBefore` ([src/contexts/voyageStore.helpers.ts](src/contexts/voyageStore.helpers.ts)) +
+`loadVoyage` ([src/components/detail/ReconciliationPanel.tsx](src/components/detail/ReconciliationPanel.tsx)).
+(Not the globally most-recent ended cruise — that would let a *later* cruise's
+end-ROB seed the baseline when viewing an older one.)
 Bunkering/production are summed across all of the current voyage's reports;
 fuel/water/NaOH consumption reuse `calcVoyageTotals` /
 `calcVoyageFreshWaterTotal` / summed `alkaliCons`. The **offset** is muted when
@@ -371,4 +380,4 @@ Voyage_Tracker_v7/
 
 ---
 
-*Last updated: 2026-06-07.*
+*Last updated: 2026-06-11.*
