@@ -42,6 +42,7 @@ Each ship owns a folder on its own network share. The crew selects that folder o
 **Per-ship folder layout:**
 ```
 Z:\voyage-tracker\solstice\
+├── _settings.json                       # shared per-ship settings (default densities, reconcile tolerances) — chief-gated, loggedBy-stamped
 ├── SL_2026-01-15_MIA-FLL.json
 ├── SL_2026-02-04_FLL-CZM.json
 └── …
@@ -67,7 +68,9 @@ Z:\voyage-tracker\solstice\
 
 **Port catalog:** the UN/LOCODE-derived catalog lives at [public/ports.json](public/ports.json), built once from the open DataHub UN/LOCODE dump by [scripts/build-ports-catalog.mjs](scripts/build-ports-catalog.mjs) (re-run manually when UN/LOCODE refreshes). The New Voyage modal autocompletes against it via [src/components/ui/PortCombobox.jsx](src/components/ui/PortCombobox.jsx); if the user types an unknown 3-letter code the combobox prompts for name + country inline and persists the entry to IndexedDB under `customPorts/<shipId>` so it shows up in future autocompletes for that ship.
 
-**Adapter contract:** the storage layer lives at `src/storage/local/` and exposes `listVoyages`, `loadVoyage`, `saveVoyage`, `deleteVoyage`, `upsertIndex`. The rest of the app depends on the interface (`src/storage/adapter.js`), not the backend.
+**Adapter contract:** the storage layer lives at `src/storage/local/` and exposes `listVoyages`, `loadVoyage`, `saveVoyage`, `deleteVoyage`, `upsertIndex`, plus `loadSettings` / `saveSettings`. The rest of the app depends on the interface (`src/storage/adapter.js`), not the backend.
+
+**Shared settings:** per-ship default densities and reconciliation tolerances live in `_settings.json` on the ship folder (not per-PC IndexedDB), read/written via the adapter's `loadSettings` / `saveSettings` ([src/storage/local/settings.ts](src/storage/local/settings.ts)). Saves are `loggedBy`-stamped (same stamp as voyages) and gated soft chief-only. When the file is absent or the share is unreachable, the app falls back to safe ship-class default densities (0.92) — never a stale per-PC value. The legacy `shipSettings` IndexedDB store is retired (dormant; no longer read or written).
 
 **Stale-file check (the minimal safety net):**
 Simultaneous edits to the same file are rare (three roles own mostly disjoint fields — see §4) but not impossible. Instead of full conflict resolution:
@@ -98,6 +101,8 @@ The `FileSystemDirectoryHandle` is stored in IndexedDB (the `handles` object sto
 
 A one-click toggle in the top bar flips between **View Only** (default on open) and **Edit Mode**. It exists purely to prevent stray clicks from a passerby at an unlocked ECR PC — it is **not** a security boundary. No PIN unlocks it; the Windows lock screen does the real access control.
 
+**Settings are chief-gated (soft).** The Settings panel disables default-density and reconcile-tolerance edits unless the session role is `chief`. Like Edit Mode this is a workflow guard, not a security boundary — the SMB ACL and the `loggedBy` stamp on `_settings.json` are the real controls. (Anyone with drive access can edit the file directly.)
+
 ### Role partition (who writes what, by convention)
 
 | Role                    | `role` value | Typical writes                                           |
@@ -123,7 +128,7 @@ Nothing in the app enforces these partitions — they're workflow convention. An
 | Boiler 1  | MGO          | MGO only             | **yes** |
 | Boiler 2  | MGO          | MGO only             | **yes** |
 
-**Default densities:** HFO 0.92, MGO 0.83, LSFO 0.92 kg/L (editable per-voyage). Numerically identical to t/m³ — the unit label flipped when counter inputs moved to litres.
+**Default densities:** HFO 0.92, MGO 0.83, LSFO 0.92 kg/L. The per-ship defaults are shared in `_settings.json` (see §3/§4) and applied to new voyages at creation. A chief can also apply the current defaults to an existing **open** voyage from the Voyage Detail pane ("Apply default densities") — fuel totals recompute live; closed voyages keep their frozen `densitiesAtClose`. Numerically identical to t/m³ — the unit label flipped when counter inputs moved to litres.
 
 **Counter inputs are in litres.** Engine and boiler counter readings (Start / End columns) are entered in L, not m³. Mass is computed as `(Δlitres × density) / 1000` in [src/domain/calculations.ts](src/domain/calculations.ts) — see `calcConsumption`. Per-row "→" arrow on EquipmentRow copies start to end (engine idle this phase); always visible while editable. The carry-over FAB carries phase END counters (in L) into the next phase's START via [src/components/modals/ManualCarryOverModal.tsx](src/components/modals/ManualCarryOverModal.tsx) — portal'd to `document.body` so it escapes AppShell's `inert={anyModalOpen}` wrapper.
 
@@ -380,4 +385,4 @@ Voyage_Tracker_v7/
 
 ---
 
-*Last updated: 2026-06-11.*
+*Last updated: 2026-06-17.*
