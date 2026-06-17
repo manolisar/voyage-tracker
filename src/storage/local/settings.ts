@@ -62,19 +62,32 @@ export async function saveSettingsFile(
   const dir = await getHandleForShip(shipId);
 
   const existing = await tryGetFileHandle(dir);
-  if (existing && prevMtime != null) {
+  if (existing) {
     const f = await existing.getFile();
+    let current: unknown = null;
+    try {
+      current = JSON.parse(await f.text());
+    } catch {
+      /* ignore parse */
+    }
+    if (prevMtime == null) {
+      // Caller thinks this is a brand-new file, but one already exists on
+      // disk — refuse to silently clobber it (mirrors saveVoyage pattern).
+      // `currentVoyage` is the shared StaleFileError field reused here to
+      // carry the current on-disk settings (the field is typed `unknown`).
+      throw new StaleFileError(`Settings file already exists`, {
+        loadedMtime: null,
+        currentMtime: f.lastModified,
+        currentVoyage: current, // carries current on-disk settings
+      });
+    }
     if (f.lastModified > prevMtime) {
-      let current: unknown = null;
-      try {
-        current = JSON.parse(await f.text());
-      } catch {
-        /* ignore parse */
-      }
+      // `currentVoyage` is the shared StaleFileError field reused here to
+      // carry the current on-disk settings (the field is typed `unknown`).
       throw new StaleFileError(`Settings changed on disk since load`, {
         loadedMtime: prevMtime,
         currentMtime: f.lastModified,
-        currentVoyage: current,
+        currentVoyage: current, // carries current on-disk settings
       });
     }
   }

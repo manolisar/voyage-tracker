@@ -72,10 +72,16 @@ describe('loadSettingsFile', () => {
 
 describe('saveSettingsFile', () => {
   it('writes settings and returns the new mtime', async () => {
-    const files: Record<string, { text: string; mtime: number }> = {};
+    // Seed with a known mtime so we can assert the exact post-write value.
+    const SEED_MTIME = 5000;
+    const files: Record<string, { text: string; mtime: number }> = {
+      [SETTINGS_FILENAME]: { text: '{}', mtime: SEED_MTIME },
+    };
     mockedGetHandle.mockResolvedValue(makeDirHandle(files));
-    const { mtime } = await saveSettingsFile('eclipse', { defaultDensities: { HFO: 0.91 } }, null);
-    expect(typeof mtime).toBe('number');
+    // Pass prevMtime matching the seed so the stale check passes.
+    const { mtime } = await saveSettingsFile('eclipse', { defaultDensities: { HFO: 0.91 } }, SEED_MTIME);
+    // The fake increments mtime by 1000 on each write.
+    expect(mtime).toBe(SEED_MTIME + 1000);
     expect(JSON.parse(files[SETTINGS_FILENAME].text).defaultDensities.HFO).toBe(0.91);
   });
 
@@ -87,5 +93,16 @@ describe('saveSettingsFile', () => {
     await expect(saveSettingsFile('eclipse', { defaultDensities: {} }, 1000)).rejects.toBeInstanceOf(
       StaleFileError,
     );
+  });
+
+  it('throws StaleFileError when the file already exists but prevMtime is null', async () => {
+    // Caller passes prevMtime=null (thinks it's creating), but file exists on disk.
+    const files = {
+      [SETTINGS_FILENAME]: { text: JSON.stringify({ defaultDensities: {} }), mtime: 3000 },
+    };
+    mockedGetHandle.mockResolvedValue(makeDirHandle(files));
+    await expect(
+      saveSettingsFile('eclipse', { defaultDensities: {} }, null),
+    ).rejects.toBeInstanceOf(StaleFileError);
   });
 });
