@@ -33,7 +33,7 @@ import {
 } from '../../storage/local/exportImport';
 import { defaultDensities } from '../../domain/shipClass';
 import { DEFAULT_RECONCILE_TOLERANCES, resolveReconcileTolerances } from '../../domain/calculations';
-import { getShipSettings, putShipSettings } from '../../storage/indexeddb';
+import { getStorageAdapter } from '../../storage/adapter';
 import { Download, Folder, Settings, Upload, X } from '../Icons';
 import type { FuelKey, ReconcileTolerances, ShipClass } from '../../types/domain';
 
@@ -46,7 +46,8 @@ type BusyState = 'folder' | 'export' | 'import' | 'densities' | 'tolerances' | n
 
 export function SettingsPanel({ shipClass, onClose }: Props) {
   const { shipId, userName, role } = useSession();
-  const { refreshList } = useVoyageStore();
+  const { refreshList, reloadSettings } = useVoyageStore();
+  const isChief = role === 'chief';
   const toast = useToast();
 
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
@@ -59,13 +60,15 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
   const baseline = shipClass ? defaultDensities(shipClass) : null;
   const [densities, setDensities] = useState<Record<string, string> | null>(null);
   const [densityDirty, setDensityDirty] = useState(false);
+  const [settingsMtime, setSettingsMtime] = useState<number | null>(null);
   useEffect(() => {
     if (!shipId || !baseline) return undefined;
     let alive = true;
     (async () => {
-      const settings = await getShipSettings(shipId);
+      const loaded = await getStorageAdapter().loadSettings(shipId);
       if (!alive) return;
-      const overrides = settings?.defaultDensities || {};
+      setSettingsMtime(loaded?.mtime ?? null);
+      const overrides = loaded?.settings.defaultDensities || {};
       const merged: Record<string, string> = {};
       for (const fuel of Object.keys(baseline) as FuelKey[]) {
         const v = overrides[fuel] ?? baseline[fuel];
@@ -93,9 +96,9 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
     if (!shipId) return undefined;
     let alive = true;
     (async () => {
-      const settings = await getShipSettings(shipId);
+      const loaded = await getStorageAdapter().loadSettings(shipId);
       if (!alive) return;
-      const r = resolveReconcileTolerances(settings?.reconcileTolerances);
+      const r = resolveReconcileTolerances(loaded?.settings.reconcileTolerances);
       setTol({ fuel: String(r.fuel), water: String(r.water), naoh: String(r.naoh) });
       setTolDirty(false);
     })();
@@ -214,8 +217,12 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
     }
     setBusy('densities');
     try {
-      await putShipSettings(shipId, { defaultDensities: parsed });
+      const existing = await getStorageAdapter().loadSettings(shipId);
+      const next = { ...(existing?.settings ?? {}), defaultDensities: parsed };
+      const { mtime } = await getStorageAdapter().saveSettings(shipId, next, existing?.mtime ?? settingsMtime);
+      setSettingsMtime(mtime);
       setDensityDirty(false);
+      await reloadSettings();
       toast.addToast('Default densities saved — applied to new voyages', 'success');
     } catch (e) {
       toast.addToast((e as Error).message || 'Could not save densities', 'error');
@@ -251,8 +258,12 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
     }
     setBusy('tolerances');
     try {
-      await putShipSettings(shipId, { reconcileTolerances: parsed as unknown as ReconcileTolerances });
+      const existing = await getStorageAdapter().loadSettings(shipId);
+      const next = { ...(existing?.settings ?? {}), reconcileTolerances: parsed as unknown as ReconcileTolerances };
+      const { mtime } = await getStorageAdapter().saveSettings(shipId, next, existing?.mtime ?? settingsMtime);
+      setSettingsMtime(mtime);
       setTolDirty(false);
+      await reloadSettings();
       toast.addToast('Reconciliation tolerances saved', 'success');
     } catch (e) {
       toast.addToast((e as Error).message || 'Could not save tolerances', 'error');
@@ -328,6 +339,13 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
                 <div className="text-xs mt-0.5" style={{ color: 'var(--color-dim)' }}>
                   kg/L @ Counters — applied to new voyages on this ship. Existing voyages keep their own densities.
                 </div>
+                {!isChief && (
+                  <div className="text-xs mt-1" style={{ color: 'var(--color-warn-fg)' }}>
+                    Only the Chief Engineer can change fleet defaults — this is a
+                    workflow guard, not a lock. Anyone with drive access can edit
+                    the file directly.
+                  </div>
+                )}
                 <div className="mt-3 grid grid-cols-3 gap-3">
                   {(Object.keys(baseline) as FuelKey[]).map((fuel) => (
                     <label key={fuel} className="flex flex-col gap-1">
@@ -339,7 +357,7 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
                         min="0"
                         className="form-input font-mono"
                         value={densities[fuel] ?? ''}
-                        disabled={disabled}
+                        disabled={disabled || !isChief}
                         onChange={(e) => handleDensityChange(fuel, e.target.value)}
                       />
                       <span className="text-[0.65rem] font-mono" style={{ color: 'var(--color-faint)' }}>
@@ -352,7 +370,7 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
                   <button
                     type="button"
                     className="btn-primary px-3 py-1.5 rounded-lg text-xs"
-                    disabled={disabled || !densityDirty}
+                    disabled={disabled || !densityDirty || !isChief}
                     onClick={handleDensitySave}
                   >
                     {busy === 'densities' ? 'Saving…' : 'Save'}
@@ -360,7 +378,7 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
                   <button
                     type="button"
                     className="btn-flat px-3 py-1.5 rounded-lg text-xs"
-                    disabled={disabled}
+                    disabled={disabled || !isChief}
                     onClick={handleDensityReset}
                     title="Reset to ship-class baseline"
                   >
@@ -390,7 +408,7 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
                       <input
                         type="number" inputMode="decimal" step="0.1" min="0"
                         className="form-input font-mono"
-                        value={tol[key]} disabled={disabled}
+                        value={tol[key]} disabled={disabled || !isChief}
                         onChange={(e) => handleTolChange(key, e.target.value)}
                       />
                     </label>
@@ -400,13 +418,13 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
               <div className="mt-3 flex items-center gap-2">
                 <button
                   type="button" className="btn-primary px-3 py-1.5 rounded-lg text-xs"
-                  disabled={disabled || !tolDirty} onClick={handleTolSave}
+                  disabled={disabled || !tolDirty || !isChief} onClick={handleTolSave}
                 >
                   {busy === 'tolerances' ? 'Saving…' : 'Save'}
                 </button>
                 <button
                   type="button" className="btn-flat px-3 py-1.5 rounded-lg text-xs"
-                  disabled={disabled} onClick={handleTolReset} title="Reset to defaults"
+                  disabled={disabled || !isChief} onClick={handleTolReset} title="Reset to defaults"
                 >
                   Reset to defaults
                 </button>
