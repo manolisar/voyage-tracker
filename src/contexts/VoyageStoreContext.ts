@@ -109,6 +109,10 @@ export interface VoyageStoreContextValue {
   setFilter: (f: FilterMode) => void;
   search: string;
   setSearch: (s: string) => void;
+
+  // Ship settings cache
+  shipSettings: import('../storage/local/settings').ShipSettingsData | null;
+  reloadSettings: () => Promise<void>;
 }
 
 export const VoyageStoreContext = createContext<VoyageStoreContextValue | null>(null);

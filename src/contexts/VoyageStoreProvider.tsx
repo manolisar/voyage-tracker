@@ -32,13 +32,13 @@ import {
 } from '../storage/adapter';
 import { StaleFileError } from '../storage/local/errors';
 import { createLocalAdapter } from '../storage/local';
+import type { ShipSettingsData } from '../storage/local/settings';
 import { createLogger } from '../util/log';
 
 const log = createLogger('VoyageStore');
 import {
   safePutDraft,
   safeDeleteDraft,
-  getShipSettings,
 } from '../storage/indexeddb';
 import { AUTO_SAVE_DELAY_MS } from '../domain/constants';
 import { calcVoyageTotals, calcVoyageFreshWaterTotal } from '../domain/calculations';
@@ -386,6 +386,25 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
     [loadedById, scheduleSave, shipId],
   );
 
+  const [shipSettings, setShipSettings] = useState<ShipSettingsData | null>(null);
+
+  const reloadSettings = useCallback(async () => {
+    if (!shipId) {
+      setShipSettings(null);
+      return;
+    }
+    try {
+      const res = await getStorageAdapter().loadSettings(shipId);
+      setShipSettings(res?.settings ?? null);
+    } catch {
+      setShipSettings(null); // unreachable share → class-default fallback downstream
+    }
+  }, [shipId]);
+
+  useEffect(() => {
+    void reloadSettings();
+  }, [reloadSettings]);
+
   // Create a new voyage file. Caller must supply the ship's `code` (from
   // ships.json) plus embark/disembark port objects picked via PortCombobox.
   const createVoyage = useCallback(
@@ -414,8 +433,8 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       // Per-ship density overrides edited from Settings live in IDB. Apply on
       // top of the shipClass baseline so crew tweaks (e.g. a ship that's been
       // burning a different HFO cut for a month) flow into every new voyage.
-      const settings = await getShipSettings(shipId);
-      const overrideDensities: Partial<typeof base.densities> = settings?.defaultDensities ?? {};
+      const loaded = await getStorageAdapter().loadSettings(shipId);
+      const overrideDensities: Partial<typeof base.densities> = loaded?.settings.defaultDensities ?? {};
       const densities = { ...base.densities, ...overrideDensities };
       const voyage: Voyage = {
         ...base,
@@ -883,6 +902,8 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       setSearch,
       refreshList,
       loadVoyage,
+      shipSettings,
+      reloadSettings,
     }),
     [
       voyages,
@@ -921,6 +942,8 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
       search,
       refreshList,
       loadVoyage,
+      shipSettings,
+      reloadSettings,
     ],
   );
 
