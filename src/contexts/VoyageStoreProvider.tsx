@@ -450,9 +450,10 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
         );
       }
       const base = defaultVoyage(shipId, partial.shipClass);
-      // Per-ship density overrides edited from Settings live in IDB. Apply on
-      // top of the shipClass baseline so crew tweaks (e.g. a ship that's been
-      // burning a different HFO cut for a month) flow into every new voyage.
+      // Per-ship density overrides edited from Settings live in the shared
+      // _settings.json on the ship folder. Read live and apply on top of the
+      // shipClass baseline so crew tweaks (e.g. a ship that's been burning a
+      // different HFO cut for a month) flow into every new voyage.
       const loaded = await getStorageAdapter().loadSettings(shipId);
       const overrideDensities: Partial<typeof base.densities> = loaded?.settings.defaultDensities ?? {};
       const densities = { ...base.densities, ...overrideDensities };

@@ -54,9 +54,10 @@ export function SettingsPanel({ shipClass, onClose }: Props) {
   const [busy, setBusy] = useState<BusyState>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Density editor — pre-filled from shipClass baseline + any per-ship IDB
-  // overrides. `densities` holds the working string values (inputs are
-  // controlled), `densityDirty` flips true as soon as the user types.
+  // Density editor — pre-filled from shipClass baseline + any per-ship
+  // overrides from the shared _settings.json. `densities` holds the working
+  // string values (inputs are controlled), `densityDirty` flips true as soon
+  // as the user types.
   const baseline = shipClass ? defaultDensities(shipClass) : null;
   const [densities, setDensities] = useState<Record<string, string> | null>(null);
   const [densityDirty, setDensityDirty] = useState(false);

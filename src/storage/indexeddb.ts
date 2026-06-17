@@ -20,9 +20,10 @@
 //                 autocomplete remember obscure ports across sessions without
 //                 requiring a catalog rebuild + redeploy.
 //
-//   `shipSettings` keyed by shipId — per-ship overrides the crew can tweak
-//                 from Settings (currently: default fuel densities). Applied
-//                 at voyage creation on top of the shipClass baseline.
+//   `shipSettings` keyed by shipId — DORMANT. Per-ship settings now live in
+//                 the shared _settings.json on the ship folder (see
+//                 src/storage/local/settings.ts). This store is retained
+//                 unused to avoid a destructive schema migration.
 
 import type { FuelKey, PortRef, ReconcileTolerances, Voyage } from '../types/domain';
 import type { EditorRole } from '../domain/constants';
