@@ -57,7 +57,7 @@ record (§12).
 | Where settings live | Shared `_settings.json` on the ship's network share (not per-PC IndexedDB). |
 | Role restriction | Soft chief-only gate on settings saves + `loggedBy` stamp. Not real auth. |
 | On-the-fly behavior | Central setting drives new voyages live; **plus** a per-voyage "apply current default densities" action to fix existing open voyages. |
-| Existing IndexedDB settings | Shared file becomes the single source of truth. IndexedDB demoted to a read-only offline cache. The existing 0.90 is **not** auto-migrated. |
+| Existing IndexedDB settings | Shared file becomes the single source of truth. `shipSettings` IndexedDB store is **retired entirely** (no read cache). When the share is unreachable or the file is absent, the app falls back to safe **class defaults** (0.92). The existing 0.90 is **not** migrated. |
 
 ## Design
 
@@ -96,13 +96,14 @@ patterns in `voyages.ts`. Filename safety reuses `ensureSafeFilename`.
 **Resolution order on read:**
 
 1. Shared `_settings.json` (authoritative).
-2. If the share is unreachable (`NotFoundError` / `NotReadableError` on the
-   directory handle), fall back to a **read-only IndexedDB cache** of the
-   last-successfully-loaded shared settings.
-3. If neither exists, **class defaults** from `solstice-class.json`.
+2. Otherwise — file absent, **or** the share is unreachable
+   (`NotFoundError` / `NotReadableError` on the directory handle) — fall back to
+   safe **class defaults** (0.92) from `solstice-class.json`.
 
-Every successful `loadSettings` updates the IndexedDB read cache. Writes never
-go to IndexedDB; they require the share.
+There is **no IndexedDB read cache**: an unreachable share yields safe class
+defaults, never a stale per-PC value. A voyage created during a transient
+outage gets 0.92 (the chief can correct it later via the per-voyage action in
+§5). Writes always require the share.
 
 ### 3. Live behavior — new voyages
 
@@ -115,10 +116,11 @@ PC; the next voyage created anywhere picks it up immediately — no redeploy.
 Reconciliation tolerances (`ReconciliationPanel` / `VoyageDetail`) read from the
 same shared settings via the adapter.
 
-A lightweight settings cache lives in `VoyageStoreProvider` (loaded on ship
-connect, refreshed whenever Settings saves) so the app isn't re-reading the file
-on every render. `createVoyage` reads fresh at creation time to guarantee
-liveness for the field that matters most.
+A lightweight in-memory settings cache lives in `VoyageStoreProvider` (loaded on
+ship connect, refreshed whenever Settings saves) so the app isn't re-reading the
+file on every render. This is a render-perf optimization only — not an offline
+fallback. `createVoyage` reads fresh at creation time to guarantee liveness for
+the field that matters most.
 
 ### 4. Soft chief-only gate
 
@@ -169,9 +171,8 @@ saves). Settings edits are infrequent, so this lightweight check is sufficient.
 3. Existing voyages keep their baked-in densities. The chief uses the
    per-voyage "apply default densities" action to correct any wrong ones
    (e.g. the 0.90 EC voyage).
-4. IndexedDB `shipSettings` is no longer written; it remains only as the
-   read-only offline cache. `getShipSettings` / `putShipSettings` are retired
-   from the write path.
+4. IndexedDB `shipSettings` is retired entirely — no longer read or written.
+   `getShipSettings` / `putShipSettings` are removed from the app's paths.
 
 ## Testing
 
@@ -186,6 +187,8 @@ saves). Settings edits are infrequent, so this lightweight check is sufficient.
 - **Per-voyage apply:** applying defaults overwrites `voyage.densities`,
   recomputes totals, and stamps `loggedBy`; hidden/disabled for non-chief and
   for closed voyages.
+- **Fallback:** `loadSettings` returns class defaults when the file is absent
+  or the share is unreachable (no stale cache).
 
 ## Docs to update
 
@@ -201,8 +204,8 @@ saves). Settings edits are infrequent, so this lightweight check is sufficient.
 - `src/storage/local/settings.ts` — new: file CRUD + mtime check.
 - `src/storage/local/index.ts` — wire new methods; reuse `stampLoggedBy`.
 - `src/storage/local/voyages.ts` — `listVoyages` skip `_settings.json`.
-- `src/storage/indexeddb.ts` — repurpose `shipSettings` as read cache; retire
-  write path.
+- `src/storage/indexeddb.ts` — retire the `shipSettings` store and its
+  `getShipSettings` / `putShipSettings` helpers entirely.
 - `src/contexts/VoyageStoreProvider.tsx` — settings cache; `createVoyage` reads
   shared settings; per-voyage apply action.
 - `src/components/modals/SettingsPanel.tsx` — chief-only gate + shared-file save.
