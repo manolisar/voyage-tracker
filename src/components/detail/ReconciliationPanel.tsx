@@ -11,9 +11,7 @@ import {
   type ReconRow,
 } from '../../domain/calculations';
 import { findPreviousEndedVoyageBefore } from '../../contexts/voyageStore.helpers';
-import { getShipSettings } from '../../storage/indexeddb';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
-import { useSession } from '../../hooks/useSession';
 import type { ReconcileTolerances, ShipClass, Voyage } from '../../types/domain';
 
 const FUEL_TEXT: Record<string, string> = {
@@ -40,8 +38,7 @@ interface Props {
 }
 
 export function ReconciliationPanel({ voyage, shipClass }: Props) {
-  const { voyages, loadVoyage } = useVoyageStore();
-  const { shipId } = useSession();
+  const { voyages, loadVoyage, shipSettings } = useVoyageStore();
   const [prev, setPrev] = useState<Voyage | null>(null);
   const [tol, setTol] = useState<ReconcileTolerances>(DEFAULT_RECONCILE_TOLERANCES);
   const [state, setState] = useState<'loading' | 'ready' | 'none'>('loading');
@@ -50,13 +47,7 @@ export function ReconciliationPanel({ voyage, shipClass }: Props) {
     let alive = true;
     (async () => {
       if (alive) setState('loading');
-      let settings;
-      try {
-        settings = shipId ? await getShipSettings(shipId) : {};
-      } catch {
-        settings = {};
-      }
-      const tolv = resolveReconcileTolerances(settings?.reconcileTolerances);
+      const tolv = resolveReconcileTolerances(shipSettings?.reconcileTolerances);
       const prevEntry = findPreviousEndedVoyageBefore(voyages, {
         filename: voyage.filename,
         startDate: voyage.startDate,
@@ -76,7 +67,7 @@ export function ReconciliationPanel({ voyage, shipClass }: Props) {
       }
     })();
     return () => { alive = false; };
-  }, [voyage.filename, voyage.startDate, voyages, shipId, loadVoyage]);
+  }, [voyage.filename, voyage.startDate, voyages, shipSettings, loadVoyage]);
 
   if (state === 'loading') {
     return (
