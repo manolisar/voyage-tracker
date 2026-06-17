@@ -388,6 +388,8 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
 
   const [shipSettings, setShipSettings] = useState<ShipSettingsData | null>(null);
 
+  // Manual refresh used by consumers (e.g. SettingsPanel after a save) to pull
+  // the freshly-written shared settings back into the cache.
   const reloadSettings = useCallback(async () => {
     if (!shipId) {
       setShipSettings(null);
@@ -401,9 +403,27 @@ export function VoyageStoreProvider({ children }: { children: ReactNode }) {
     }
   }, [shipId]);
 
+  // Load the shared settings on ship connect / change. Inlined (rather than
+  // calling reloadSettings) with an `alive` guard so the setState never fires
+  // synchronously in the effect body and is skipped after unmount.
   useEffect(() => {
-    void reloadSettings();
-  }, [reloadSettings]);
+    let alive = true;
+    (async () => {
+      if (!shipId) {
+        if (alive) setShipSettings(null);
+        return;
+      }
+      try {
+        const res = await getStorageAdapter().loadSettings(shipId);
+        if (alive) setShipSettings(res?.settings ?? null);
+      } catch {
+        if (alive) setShipSettings(null);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [shipId]);
 
   // Create a new voyage file. Caller must supply the ship's `code` (from
   // ships.json) plus embark/disembark port objects picked via PortCombobox.
