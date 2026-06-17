@@ -153,7 +153,11 @@ export function VoyageDetail({
   const resolvedDefaults = resolveDefaultDensities(shipClass, shipSettings?.defaultDensities);
 
   function handleApplyDensities() {
-    updateVoyage(filename, (v) => ({ ...v, densities: { ...resolvedDefaults } }));
+    // `shipClass` is a required prop here, so resolveDefaultDensities always
+    // returns all three fuel keys — narrow the Record<string, number> result
+    // back to the voyage's Record<FuelKey, number> shape.
+    const densities = { ...resolvedDefaults } as Record<FuelKey, number>;
+    updateVoyage(filename, (v) => ({ ...v, densities }));
     setShowApplyDensities(false);
   }
 
