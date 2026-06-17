@@ -61,6 +61,18 @@ export function defaultDensities(shipClass: ShipClass): Record<FuelKey, number> 
   return { ...shipClass.defaultDensities };
 }
 
+/**
+ * Merge the ship-class baseline densities with per-ship shared overrides.
+ * Overrides win; missing override keys keep the baseline value.
+ */
+export function resolveDefaultDensities(
+  shipClass: ShipClass | null,
+  overrides: Partial<Record<FuelKey, number>> | undefined,
+): Record<string, number> {
+  const base = shipClass ? defaultDensities(shipClass) : {};
+  return { ...base, ...(overrides || {}) };
+}
+
 // Reset cache — used by tests or when admin reloads class config.
 export function _clearShipClassCache(): void {
   cache.clear();
