@@ -5,6 +5,7 @@
 // a per-ship network folder — see CLAUDE.md §3).
 
 import type { Voyage, VoyageManifestEntry } from '../types/domain';
+import type { ShipSettingsData } from './local/settings';
 
 export interface StorageAdapter {
   backend: string;
@@ -17,6 +18,12 @@ export interface StorageAdapter {
     prevMtime?: number | null,
   ): Promise<{ mtime: number }>;
   deleteVoyage(shipId: string, filename: string): Promise<void>;
+  loadSettings(shipId: string): Promise<{ settings: ShipSettingsData; mtime: number } | null>;
+  saveSettings(
+    shipId: string,
+    settings: ShipSettingsData,
+    prevMtime?: number | null,
+  ): Promise<{ mtime: number }>;
 }
 
 let current: StorageAdapter | null = null;

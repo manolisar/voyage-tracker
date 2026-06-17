@@ -22,7 +22,9 @@ import {
   saveVoyage,
   deleteVoyage,
 } from './voyages';
+import { loadSettingsFile, saveSettingsFile, type ShipSettingsData } from './settings';
 import type { StorageAdapter } from '../adapter';
+import { StorageError } from '../adapter';
 import type { Voyage } from '../../types/domain';
 import type { EditorRole } from '../../domain/constants';
 
@@ -53,6 +55,23 @@ export function createLocalAdapter({
     },
 
     deleteVoyage: (shipId, filename) => deleteVoyage(shipId, filename),
+
+    // Shared settings file (_settings.json). Unreachable share → null so the
+    // caller falls back to safe class defaults (never a stale per-PC value).
+    loadSettings: async (shipId) => {
+      try {
+        return await loadSettingsFile(shipId);
+      } catch (e) {
+        if (e instanceof StorageError || e instanceof DOMException) return null;
+        throw e;
+      }
+    },
+
+    // Settings get the same loggedBy stamp as voyages.
+    saveSettings: (shipId, settings, prevMtime) => {
+      const stamped = stampLoggedBy(settings, getSession()) as ShipSettingsData;
+      return saveSettingsFile(shipId, stamped, prevMtime);
+    },
   };
 }
 

@@ -51,6 +51,12 @@ describe('createLocalAdapter', () => {
     expect(typeof a.deleteVoyage).toBe('function');
   });
 
+  it('exposes loadSettings and saveSettings', () => {
+    const a = createLocalAdapter();
+    expect(typeof a.loadSettings).toBe('function');
+    expect(typeof a.saveSettings).toBe('function');
+  });
+
   it('reads session lazily via getSession (so adapter sees fresh user/role)', () => {
     // We test stampLoggedBy directly with the lazy-session pattern; the adapter
     // wires the same accessor into saveVoyage. Avoids mocking FSA + IDB.
