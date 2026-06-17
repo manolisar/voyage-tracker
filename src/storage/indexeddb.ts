@@ -287,28 +287,6 @@ export async function addCustomPort(shipId: string, port: Partial<PortRef>): Pro
   await awaitRequest(store.put({ shipId, ports: next, updatedAt: Date.now() }));
 }
 
-// ── Ship settings (per-ship overrides edited from Settings) ──────────────
-
-export async function getShipSettings(shipId: string): Promise<ShipSettings> {
-  if (!shipId) return {};
-  const store = await tx(STORE_SHIP_SETTINGS);
-  const req = store.get(shipId);
-  const row = (await awaitRequest(req)) as
-    | (ShipSettings & { shipId: string; updatedAt: number })
-    | undefined;
-  if (!row) return {};
-  const { shipId: _s, updatedAt: _u, ...rest } = row;
-  void _s;
-  void _u;
-  return rest;
-}
-
-// Shallow-merges `patch` onto the existing settings row so callers can
-// update one field at a time without round-tripping the whole object.
-export async function putShipSettings(shipId: string, patch: ShipSettings): Promise<void> {
-  if (!shipId) return;
-  const current = await getShipSettings(shipId);
-  const next = { ...current, ...patch };
-  const store = await tx(STORE_SHIP_SETTINGS, 'readwrite');
-  await awaitRequest(store.put({ shipId, ...next, updatedAt: Date.now() }));
-}
+// Ship settings now live in the shared _settings.json on the ship folder
+// (see src/storage/local/settings.ts). The shipSettings IDB store is retained
+// dormant to avoid a destructive schema migration; it is no longer read/written.
