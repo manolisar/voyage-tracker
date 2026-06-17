@@ -4,6 +4,7 @@ import {
   parsePortsFromFilename,
   asPortObject,
   normalizeVoyageFromFilename,
+  isVoyageFile,
 } from './voyages';
 import { PathSafetyError } from './errors';
 import type { PortRef } from '../../types/domain';
@@ -138,5 +139,18 @@ describe('normalizeVoyageFromFilename', () => {
   it('passes through non-object voyages unchanged (no throw)', () => {
     expect(normalizeVoyageFromFilename(null, 'foo.json')).toBeNull();
     expect(normalizeVoyageFromFilename('voyage', 'foo.json')).toBe('voyage');
+  });
+});
+
+describe('isVoyageFile', () => {
+  it('accepts ordinary voyage json files', () => {
+    expect(isVoyageFile('SL_2026-01-15_MIA-FLL.json')).toBe(true);
+  });
+
+  it('rejects non-json, the index, the settings file, and underscore-prefixed files', () => {
+    expect(isVoyageFile('notes.txt')).toBe(false);
+    expect(isVoyageFile('_index.json')).toBe(false);
+    expect(isVoyageFile('_settings.json')).toBe(false);
+    expect(isVoyageFile('_anything.json')).toBe(false);
   });
 });

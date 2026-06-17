@@ -20,6 +20,14 @@ const log = createLogger('local/voyages');
 // (used by tests and a couple of helpers) keep working without a churn pass.
 export { ensureSafeFilename };
 
+// Names the voyage listing should treat as voyage files. Anything starting
+// with `_` is app-internal (`_index.json`, `_settings.json`) and skipped.
+export function isVoyageFile(name: string): boolean {
+  if (!name.endsWith('.json')) return false;
+  if (name.startsWith('_')) return false;
+  return true;
+}
+
 // ── Small helpers ────────────────────────────────────────────────────────
 
 async function tryGetFileHandle(
@@ -147,8 +155,7 @@ export async function listVoyages(shipId: string): Promise<VoyageManifestEntry[]
   const entries: { name: string; handle: FileSystemFileHandle }[] = [];
   for await (const [name, handle] of dir.entries()) {
     if (handle.kind !== 'file') continue;
-    if (!name.endsWith('.json')) continue;
-    if (name === '_index.json') continue;
+    if (!isVoyageFile(name)) continue;
     entries.push({ name, handle: handle as FileSystemFileHandle });
   }
 
