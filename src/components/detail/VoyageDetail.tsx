@@ -16,7 +16,9 @@ import {
 } from '../../domain/calculations';
 import { sortLegsByDate, voyageRouteLongLabel } from '../../domain/factories';
 import { useVoyageStore } from '../../hooks/useVoyageStore';
+import { useSession } from '../../hooks/useSession';
 import { useToast } from '../../hooks/useToast';
+import { resolveDefaultDensities } from '../../domain/shipClass';
 import { ChevronRight, Trash2, Unlock } from '../Icons';
 import { ReconciliationPanel } from './ReconciliationPanel';
 import type { FuelKey, Leg, Ship, ShipClass, Voyage } from '../../types/domain';
@@ -128,7 +130,7 @@ export function VoyageDetail({
   onDeleteVoyage,
   onDeleteLeg,
 }: Props) {
-  const { reopenVoyage, updateVoyage } = useVoyageStore();
+  const { reopenVoyage, updateVoyage, shipSettings } = useVoyageStore();
   const toast = useToast();
   const totals = calcVoyageTotals(voyage, shipClass);
   const fuelByMode = calcFuelByMode(voyage, shipClass);
@@ -144,6 +146,16 @@ export function VoyageDetail({
   const lubeOil = voyage.voyageEnd?.lubeOil || null;
 
   const filename = voyage.filename ?? '';
+
+  const { role } = useSession();
+  const isChief = role === 'chief';
+  const [showApplyDensities, setShowApplyDensities] = useState(false);
+  const resolvedDefaults = resolveDefaultDensities(shipClass, shipSettings?.defaultDensities);
+
+  function handleApplyDensities() {
+    updateVoyage(filename, (v) => ({ ...v, densities: { ...resolvedDefaults } }));
+    setShowApplyDensities(false);
+  }
 
   const handleReopen = () => {
     reopenVoyage(filename);
@@ -382,6 +394,23 @@ export function VoyageDetail({
           <div className="section-label">
             Fuel Densities <span className="font-mono ml-2" style={{ color: 'var(--color-dim)' }}>kg/L @ Counters</span>
           </div>
+          <div className="flex-1" />
+          {editMode && isChief && !ended && (
+            <button
+              type="button"
+              className="btn-flat px-3 py-1.5 rounded-lg text-xs"
+              onClick={() => setShowApplyDensities(true)}
+              title="Overwrite this voyage's densities with the current ship defaults — fuel totals recompute"
+            >
+              Apply default densities (HFO {Number(resolvedDefaults.HFO).toFixed(2)} · MGO{' '}
+              {Number(resolvedDefaults.MGO).toFixed(2)} · LSFO {Number(resolvedDefaults.LSFO).toFixed(2)})
+            </button>
+          )}
+          {editMode && isChief && ended && (
+            <span className="text-xs" style={{ color: 'var(--color-faint)' }} title="Density at close is frozen">
+              voyage closed
+            </span>
+          )}
         </div>
         <div className="grid grid-cols-3 gap-4">
           {FUEL_COLS.map(({ key, label }) => (
@@ -395,6 +424,39 @@ export function VoyageDetail({
             />
           ))}
         </div>
+        {showApplyDensities && (
+          <div className="modal-overlay" role="presentation" onClick={() => setShowApplyDensities(false)}>
+            <div
+              className="modal-content w-full max-w-md"
+              role="dialog"
+              aria-modal="true"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-head"><h2>Apply default densities?</h2></div>
+              <div className="p-6 space-y-3 text-sm">
+                <p>
+                  Replace this voyage's densities with the current ship defaults.
+                  All fuel totals will recompute.
+                </p>
+                <div className="font-mono text-xs" style={{ color: 'var(--color-dim)' }}>
+                  {(['HFO', 'MGO', 'LSFO'] as const).map((k) => (
+                    <div key={k}>
+                      {k}: {voyage.densities?.[k] ?? '—'} → {Number(resolvedDefaults[k]).toFixed(3)}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button type="button" className="btn-flat px-3 py-1.5 rounded-lg text-xs" onClick={() => setShowApplyDensities(false)}>
+                    Cancel
+                  </button>
+                  <button type="button" className="btn-primary px-3 py-1.5 rounded-lg text-xs" onClick={handleApplyDensities}>
+                    Apply
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Legs list */}
