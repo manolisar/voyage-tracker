@@ -105,13 +105,22 @@ describe('findPreviousEndedVoyageBefore', () => {
     expect(r?.filename).toBe('prev.json');
   });
 
-  it('ignores ended voyages that started before but finished after the target start (overlap)', () => {
-    const overlap = [
-      entry({ filename: 'long.json', ended: true, startDate: '2026-01-01', endDate: '2026-06-01' }),
-      entry({ filename: 'target.json', ended: true, startDate: '2026-02-01', endDate: '2026-02-15' }),
+  it('sequences by startDate, not the administrative endDate (close-out date)', () => {
+    // Regression: the previous cruise sailed 06-14 and physically finished on
+    // its last arrival 06-21, but was closed out (endDate stamped) on 06-23 —
+    // AFTER the next cruise started on 06-21. Keying off endDate would exclude
+    // it and fall through to a stale older cruise; keying off startDate finds
+    // it correctly. See findPreviousEndedVoyageBefore doc comment.
+    const closeoutLag = [
+      entry({ filename: 'stale.json', ended: true, startDate: '2026-05-01', endDate: '2026-05-10' }),
+      entry({ filename: 'prev.json', ended: true, startDate: '2026-06-14', endDate: '2026-06-23' }),
+      entry({ filename: 'current.json', ended: false, startDate: '2026-06-21' }),
     ];
-    const r = findPreviousEndedVoyageBefore(overlap, { filename: 'target.json', startDate: '2026-02-01' });
-    expect(r).toBeNull();
+    const r = findPreviousEndedVoyageBefore(closeoutLag, {
+      filename: 'current.json',
+      startDate: '2026-06-21',
+    });
+    expect(r?.filename).toBe('prev.json');
   });
 });
 

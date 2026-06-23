@@ -133,29 +133,37 @@ export function findPreviousEndedVoyage(
   })[0];
 }
 
-// Like findPreviousEndedVoyage, but bounded to voyages that FINISHED on or
-// before `current` started — i.e. the cruise chronologically preceding the one
-// being viewed, not merely the globally-most-recently-ended voyage.
+// Like findPreviousEndedVoyage, but bounded to the cruise that SAILED
+// immediately before `current` — i.e. the cruise chronologically preceding the
+// one being viewed, not merely the globally-most-recently-ended voyage.
 //
 // The Reconciliation panel needs this distinction: opening an *older* ended
 // cruise must reconcile against the cruise immediately before IT, never a
 // later one (findPreviousEndedVoyage would wrongly return the most recent
-// ended voyage in the fleet, producing a nonsensical mass balance). Same sort
-// key + tie-break as findPreviousEndedVoyage; the `<= current.startDate` filter
-// keeps same-day turnarounds (prev END == this START) as valid predecessors.
+// ended voyage in the fleet, producing a nonsensical mass balance).
+//
+// Sequencing is by `startDate`, NOT `endDate`. A voyage's `endDate` is the
+// administrative close-out date stamped when the chief clicks End Voyage
+// (defaults to "today"), which can fall days AFTER the cruise physically
+// finished — e.g. a cruise that arrived 06-21 but was closed out 06-23. Keying
+// the predecessor search off that close-out date would wrongly exclude the
+// genuine predecessor of the next cruise (which started 06-21) and fall through
+// to a stale older cruise's finishing ROB. For this fleet cruises are strictly
+// sequential (one ship, one cruise at a time), so the immediately-earlier
+// `startDate` reliably identifies the cruise whose finishing ROB seeds this
+// one's baseline.
 export function findPreviousEndedVoyageBefore(
   voyages: VoyageManifestEntry[],
   current: { filename: string | null; startDate: string },
 ): VoyageManifestEntry | null {
-  const sortKey = (v: VoyageManifestEntry) => v.endDate || v.startDate || '';
   const cur = current.startDate || '';
   const candidates = voyages.filter(
-    (v) => v.ended && v.filename !== current.filename && sortKey(v) <= cur,
+    (v) => v.ended && v.filename !== current.filename && (v.startDate || '') < cur,
   );
   if (!candidates.length) return null;
   return candidates.slice().sort((a, b) => {
-    const ak = sortKey(a);
-    const bk = sortKey(b);
+    const ak = a.startDate || '';
+    const bk = b.startDate || '';
     if (ak !== bk) return bk.localeCompare(ak);
     return b.filename.localeCompare(a.filename);
   })[0];
