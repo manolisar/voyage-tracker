@@ -76,12 +76,13 @@ export function ReportForm({ report, onChange, densities, shipClass, readOnly = 
   }
   const totalConsumption = grandTotals.HFO + grandTotals.MGO + grandTotals.LSFO;
 
-  // Cumulative totals across operational phases only — used on the LAST
-  // operational phase when there are 2+ (i.e. when changeovers exist).
-  const calcCumulative = () => {
+  // Cumulative totals across a set of phases — shown on the LAST phase of a
+  // section when it has 2+ phases (i.e. when changeovers exist) so the section
+  // total reflects every phase, not just the last one.
+  const calcCumulative = (phases: Phase[]) => {
     const engineCumulative: FuelTotals = { HFO: 0, MGO: 0, LSFO: 0 };
     const boilerCumulative: FuelTotals = { HFO: 0, MGO: 0, LSFO: 0 };
-    for (const phase of operationalPhases) {
+    for (const phase of phases) {
       for (const def of shipClass.equipment) {
         const eq = phase.equipment?.[def.key];
         if (!eq) continue;
@@ -209,7 +210,7 @@ export function ReportForm({ report, onChange, densities, shipClass, readOnly = 
           {operationalPhases.map((phase, index) => {
             const isLast = index === operationalPhases.length - 1;
             const hasMultiple = operationalPhases.length > 1;
-            const cumulativeTotals = isLast && hasMultiple ? calcCumulative() : null;
+            const cumulativeTotals = isLast && hasMultiple ? calcCumulative(operationalPhases) : null;
             return (
               <PhaseSection
                 key={phase.id}
@@ -242,20 +243,25 @@ export function ReportForm({ report, onChange, densities, shipClass, readOnly = 
             <div className="flex-1 border-t" style={{ borderColor: 'var(--color-border-subtle)' }}></div>
           </div>
 
-          {standbyPhases.map((sp, idx) => (
-            <PhaseSection
-              key={sp.id}
-              phase={sp}
-              shipClass={shipClass}
-              onChange={(p) => handlePhaseChange(sp.id, p)}
-              onDelete={() => handleDeletePhase(sp.id)}
-              canDelete={standbyPhases.length > 1 && idx > 0}
-              densities={densities}
-              showTotals={idx === standbyPhases.length - 1}
-              cumulativeTotals={null}
-              readOnly={readOnly}
-            />
-          ))}
+          {standbyPhases.map((sp, idx) => {
+            const isLast = idx === standbyPhases.length - 1;
+            const hasMultiple = standbyPhases.length > 1;
+            const cumulativeTotals = isLast && hasMultiple ? calcCumulative(standbyPhases) : null;
+            return (
+              <PhaseSection
+                key={sp.id}
+                phase={sp}
+                shipClass={shipClass}
+                onChange={(p) => handlePhaseChange(sp.id, p)}
+                onDelete={() => handleDeletePhase(sp.id)}
+                canDelete={hasMultiple && idx > 0}
+                densities={densities}
+                showTotals={isLast}
+                cumulativeTotals={cumulativeTotals}
+                readOnly={readOnly}
+              />
+            );
+          })}
 
           {!readOnly && (
             <button
