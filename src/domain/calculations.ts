@@ -89,6 +89,32 @@ export function calcConsumption(
   return (diffL * density) / 1000;
 }
 
+// When an equipment has a changeover (mid-phase fuel switch), return two
+// {fuel, mt} entries — one per fuel segment. Without changeover, one entry.
+// Skips segments with null consumption (incomplete/negative counters).
+export interface FuelSegment { fuel: FuelKey; mt: number }
+
+export function calcEquipmentSegments(
+  eq: { start: string; end: string; fuel: FuelKey; changeOverCounter?: string; changeOverFuel?: FuelKey },
+  densities: DensityMap | null | undefined,
+): FuelSegment[] {
+  const segments: FuelSegment[] = [];
+  const coCounter = eq.changeOverCounter;
+  const coFuel = eq.changeOverFuel;
+  const hasChangeover = coCounter != null && coCounter !== '' && coFuel != null;
+
+  if (hasChangeover) {
+    const mt1 = calcConsumption(eq.start, coCounter, eq.fuel, densities);
+    if (mt1 != null) segments.push({ fuel: eq.fuel, mt: mt1 });
+    const mt2 = calcConsumption(coCounter, eq.end, coFuel!, densities);
+    if (mt2 != null) segments.push({ fuel: coFuel!, mt: mt2 });
+  } else {
+    const mt = calcConsumption(eq.start, eq.end, eq.fuel, densities);
+    if (mt != null) segments.push({ fuel: eq.fuel, mt });
+  }
+  return segments;
+}
+
 // Round MT to 2 decimals for display.
 export function formatMT(mt: number | null | undefined): string {
   if (mt == null || isNaN(mt)) return '0.00';
@@ -111,13 +137,13 @@ export function calcVoyageTotals(
       for (const phase of report.phases) {
         if (!phase.equipment) continue;
         for (const eq of Object.values(phase.equipment)) {
-          const cons = calcConsumption(eq.start, eq.end, eq.fuel, densities);
-          if (cons == null) continue;
-          const fuelKey = String(eq.fuel || '').toLowerCase();
-          if (fuelKey === 'hfo' || fuelKey === 'mgo' || fuelKey === 'lsfo') {
-            out[fuelKey] += cons;
+          for (const seg of calcEquipmentSegments(eq, densities)) {
+            const fuelKey = seg.fuel.toLowerCase();
+            if (fuelKey === 'hfo' || fuelKey === 'mgo' || fuelKey === 'lsfo') {
+              out[fuelKey] += seg.mt;
+            }
+            out.total += seg.mt;
           }
-          out.total += cons;
         }
       }
     }
@@ -149,13 +175,13 @@ export function calcPhaseTotals(
   const out: FuelTotals = { hfo: 0, mgo: 0, lsfo: 0, total: 0 };
   if (!phase?.equipment) return out;
   for (const eq of Object.values(phase.equipment)) {
-    const cons = calcConsumption(eq.start, eq.end, eq.fuel, densities);
-    if (cons == null) continue;
-    const fuelKey = String(eq.fuel || '').toLowerCase();
-    if (fuelKey === 'hfo' || fuelKey === 'mgo' || fuelKey === 'lsfo') {
-      out[fuelKey] += cons;
+    for (const seg of calcEquipmentSegments(eq, densities)) {
+      const fuelKey = seg.fuel.toLowerCase();
+      if (fuelKey === 'hfo' || fuelKey === 'mgo' || fuelKey === 'lsfo') {
+        out[fuelKey] += seg.mt;
+      }
+      out.total += seg.mt;
     }
-    out.total += cons;
   }
   return out;
 }
@@ -193,13 +219,13 @@ export function calcFuelByMode(
         if (!mode || !phase.equipment) continue;
         const bucket = out[mode];
         for (const eq of Object.values(phase.equipment)) {
-          const cons = calcConsumption(eq.start, eq.end, eq.fuel, densities);
-          if (cons == null) continue;
-          const fuelKey = String(eq.fuel || '').toLowerCase();
-          if (fuelKey === 'hfo' || fuelKey === 'mgo' || fuelKey === 'lsfo') {
-            bucket[fuelKey] += cons;
+          for (const seg of calcEquipmentSegments(eq, densities)) {
+            const fuelKey = seg.fuel.toLowerCase();
+            if (fuelKey === 'hfo' || fuelKey === 'mgo' || fuelKey === 'lsfo') {
+              bucket[fuelKey] += seg.mt;
+            }
+            bucket.total += seg.mt;
           }
-          bucket.total += cons;
         }
       }
     }
@@ -231,9 +257,9 @@ export function calcBoilerFuelByMode(
         if (!mode || !phase.equipment) continue;
         for (const [key, eq] of Object.entries(phase.equipment)) {
           if (!boilerKeys.has(key)) continue;
-          const cons = calcConsumption(eq.start, eq.end, eq.fuel, densities);
-          if (cons == null) continue;
-          out[mode] += cons;
+          for (const seg of calcEquipmentSegments(eq, densities)) {
+            out[mode] += seg.mt;
+          }
         }
       }
     }
