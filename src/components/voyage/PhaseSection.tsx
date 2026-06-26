@@ -4,7 +4,7 @@
 //   - engine vs boiler partition uses each item's `category` field.
 //   - delete button only shown when `canDelete`.
 
-import { calcEquipmentSegments } from '../../domain/calculations';
+import { calcConsumption } from '../../domain/calculations';
 import { PHASE_TYPES } from '../../domain/constants';
 import { X } from '../Icons';
 import { EquipmentRow } from './EquipmentRow';
@@ -77,10 +77,10 @@ export function PhaseSection({
   for (const def of shipClass.equipment) {
     const eq = phase.equipment?.[def.key];
     if (!eq) continue;
-    for (const seg of calcEquipmentSegments(eq, densities)) {
-      if (def.category === 'boiler') boilerTotals[seg.fuel] = (boilerTotals[seg.fuel] || 0) + seg.mt;
-      else engineTotals[seg.fuel] = (engineTotals[seg.fuel] || 0) + seg.mt;
-    }
+    const cons = calcConsumption(eq.start, eq.end, eq.fuel, densities);
+    if (cons == null) continue;
+    if (def.category === 'boiler') boilerTotals[eq.fuel] = (boilerTotals[eq.fuel] || 0) + cons;
+    else engineTotals[eq.fuel] = (engineTotals[eq.fuel] || 0) + cons;
   }
 
   const displayEngine = cumulativeTotals?.engineCumulative ?? engineTotals;
@@ -169,7 +169,6 @@ export function PhaseSection({
                 onChange={(v) => handleEqChange(def.key, v)}
                 densities={densities}
                 readOnly={readOnly}
-                phaseType={phase.type}
               />
             ))}
           </tbody>

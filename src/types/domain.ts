@@ -49,8 +49,6 @@ export interface EquipmentReading {
   start: string;
   end: string;
   fuel: FuelKey;
-  changeOverCounter?: string;
-  changeOverFuel?: FuelKey;
 }
 
 export interface Phase {
