@@ -1,7 +1,8 @@
-# Voyage Tracker v7 — Project Charter
+# Voyage Tracker v8 — Project Charter
 
 > Engineering log for the **Celebrity Solstice-class** (5 ships).
-> Replaces v6 (`~/Projects/Voyage_Tracker_v6`, single-ship, local-file storage).
+> Codebase is **TypeScript/TSX** (migrated from the v6/v7 JS/JSX origin).
+> Lineage: v6 (`~/Projects/Voyage_Tracker_v6`, single-ship, local-file storage) → fleet rewrite.
 
 ---
 
@@ -66,9 +67,9 @@ Z:\voyage-tracker\solstice\
 }
 ```
 
-**Port catalog:** the UN/LOCODE-derived catalog lives at [public/ports.json](public/ports.json), built once from the open DataHub UN/LOCODE dump by [scripts/build-ports-catalog.mjs](scripts/build-ports-catalog.mjs) (re-run manually when UN/LOCODE refreshes). The New Voyage modal autocompletes against it via [src/components/ui/PortCombobox.jsx](src/components/ui/PortCombobox.jsx); if the user types an unknown 3-letter code the combobox prompts for name + country inline and persists the entry to IndexedDB under `customPorts/<shipId>` so it shows up in future autocompletes for that ship.
+**Port catalog:** the UN/LOCODE-derived catalog lives at [public/ports.json](public/ports.json), built once from the open DataHub UN/LOCODE dump by [scripts/build-ports-catalog.mjs](scripts/build-ports-catalog.mjs) (re-run manually when UN/LOCODE refreshes). The New Voyage modal autocompletes against it via [src/components/ui/PortCombobox.tsx](src/components/ui/PortCombobox.tsx); if the user types an unknown 3-letter code the combobox prompts for name + country inline and persists the entry to IndexedDB under `customPorts/<shipId>` so it shows up in future autocompletes for that ship.
 
-**Adapter contract:** the storage layer lives at `src/storage/local/` and exposes `listVoyages`, `loadVoyage`, `saveVoyage`, `deleteVoyage`, `upsertIndex`, plus `loadSettings` / `saveSettings`. The rest of the app depends on the interface (`src/storage/adapter.js`), not the backend.
+**Adapter contract:** the storage layer lives at `src/storage/local/` and exposes `listVoyages`, `loadVoyage`, `saveVoyage`, `deleteVoyage`, plus `loadSettings` / `saveSettings`. There is no `_index.json` and no `upsertIndex` — `listVoyages` derives the manifest by directory-listing the ship folder and reading each file's `startDate`/`voyageEnd` (cheap on a LAN share, no stale-index problem). The rest of the app depends on the interface (`src/storage/adapter.ts`), not the backend.
 
 **Shared settings:** per-ship default densities and reconciliation tolerances live in `_settings.json` on the ship folder (not per-PC IndexedDB), read/written via the adapter's `loadSettings` / `saveSettings` ([src/storage/local/settings.ts](src/storage/local/settings.ts)). Saves are `loggedBy`-stamped (same stamp as voyages) and gated soft chief-only. When the file is absent or the share is unreachable, the app falls back to safe ship-class default densities (0.92) — never a stale per-PC value. The legacy `shipSettings` IndexedDB store is retired (dormant; no longer read or written).
 
@@ -81,7 +82,7 @@ Simultaneous edits to the same file are rare (three roles own mostly disjoint fi
 
 This is cheap (one `getFile()` call, no full read) and catches the only realistic overlap case on a LAN share. There are no SHAs, no version vectors, no retries.
 
-**Offline fallback:** if the network drive is unreachable (`NotFoundError` / `NotReadableError`), the save is cached in IndexedDB (`src/storage/indexeddb.js`) and flushed on the next successful permission grant.
+**Offline fallback:** if the network drive is unreachable (`NotFoundError` / `NotReadableError`), the save is cached in IndexedDB (`src/storage/indexeddb.ts`) and flushed on the next successful permission grant.
 
 ---
 
@@ -112,7 +113,7 @@ A one-click toggle in the top bar flips between **View Only** (default on open) 
 | Bridge Officer of Watch | `bridge`     | Writes per-leg Nav Report (times, distance, speed).      |
 | Other                   | `other`      | Fallback for cadets/relief crew.                         |
 
-Stored role values are the lowercase enum from [`src/domain/constants.js`](src/domain/constants.js) (`EDITOR_ROLES`). The capitalized human labels (`EDITOR_ROLE_LABELS`) are only for display — the TopBar renders the first word of the label (e.g. "Chief") next to the user's name.
+Stored role values are the lowercase enum from [`src/domain/constants.ts`](src/domain/constants.ts) (`EDITOR_ROLES`). The capitalized human labels (`EDITOR_ROLE_LABELS`) are only for display — the TopBar renders the first word of the label (e.g. "Chief") next to the user's name.
 
 Nothing in the app enforces these partitions — they're workflow convention. Any role can write any field; the `loggedBy` stamp on each save records who did it. That's the audit trail.
 
@@ -131,6 +132,12 @@ Nothing in the app enforces these partitions — they're workflow convention. An
 **Default densities:** HFO 0.92, MGO 0.83, LSFO 0.92 kg/L. The per-ship defaults are shared in `_settings.json` (see §3/§4) and applied to new voyages at creation. A chief can also apply the current defaults to an existing **open** voyage from the Voyage Detail pane ("Apply default densities") — fuel totals recompute live; closed voyages keep their frozen `densitiesAtClose`. Numerically identical to t/m³ — the unit label flipped when counter inputs moved to litres.
 
 **Counter inputs are in litres.** Engine and boiler counter readings (Start / End columns) are entered in L, not m³. Mass is computed as `(Δlitres × density) / 1000` in [src/domain/calculations.ts](src/domain/calculations.ts) — see `calcConsumption`. Per-row "→" arrow on EquipmentRow copies start to end (engine idle this phase); always visible while editable. The carry-over FAB carries phase END counters (in L) into the next phase's START via [src/components/modals/ManualCarryOverModal.tsx](src/components/modals/ManualCarryOverModal.tsx) — portal'd to `document.body` so it escapes AppShell's `inert={anyModalOpen}` wrapper.
+
+**Fuel changeover phases.** Both report sections support adding extra phases for a mid-section fuel switch (e.g. HFO→MGO entering an ECA), via an "Add Fuel Changeover Phase" button in [src/components/voyage/ReportForm.tsx](src/components/voyage/ReportForm.tsx):
+- The **Port / Sea (operational)** button adds a `port`/`sea` phase (named "C/O (From → To)") before the standby phase.
+- The **Stand By (Maneuvering)** button adds a second `standby` phase (named "Fuel C/O") after the original standby phase.
+
+The seed phases (one operational + one standby per report, from `phaseTemplates`) are not deletable; added changeover phases are. When a section holds 2+ phases, its **last** phase displays the **cumulative** Engine/Boiler total across every phase in that section (marked "(Cumulative)" in the phase header) via `calcCumulative(phases)` — so the standby section sums the original standby phase **plus** every changeover phase, not just the last one. The report-level total (`grandTotals`) already sums all phases regardless.
 
 **Lub-oil:** recorded **only** at End Voyage (one entry per voyage), NOT in departure/arrival reports.
 
@@ -215,9 +222,16 @@ each resource it computes, via `calcReconciliation` in
 consumption`, then `offset = measuredEndROB − expected`. Rows: HFO/MGO/LSFO
 (MT), Fresh Water, NaOH (L). The baseline (`prevCruiseEndROB`) is the latest
 non-empty **arrival** ROB of the **chronologically-previous** ended cruise — the
-latest ended voyage that finished on or before the viewed cruise started, via
+ended cruise that *sailed* immediately before the viewed one, via
 `findPreviousEndedVoyageBefore` ([src/contexts/voyageStore.helpers.ts](src/contexts/voyageStore.helpers.ts)) +
 `loadVoyage` ([src/components/detail/ReconciliationPanel.tsx](src/components/detail/ReconciliationPanel.tsx)).
+Predecessor selection is sequenced by **`startDate`**, NOT `endDate`: `endDate`
+is the administrative close-out date stamped at End Voyage (defaults to "today"),
+which can fall *after* the next cruise's start (e.g. a cruise that arrives the
+21st but is closed out the 23rd) and would otherwise exclude the genuine
+predecessor and seed the baseline from a stale older cruise's ROB. For this
+strictly-sequential fleet (one ship, one cruise at a time) the immediately-earlier
+`startDate` reliably identifies the predecessor.
 (Not the globally most-recent ended cruise — that would let a *later* cruise's
 end-ROB seed the baseline when viewing an older one.)
 Bunkering/production are summed across all of the current voyage's reports;
@@ -225,8 +239,9 @@ fuel/water/NaOH consumption reuse `calcVoyageTotals` /
 `calcVoyageFreshWaterTotal` / summed `alkaliCons`. The **offset** is muted when
 within tolerance and bold amber (with sign) beyond it. Tolerances are an
 **absolute numeric offset per resource group** (Fuel MT / Fresh Water / NaOH L;
-defaults 2 / 5 / 10), editable per-ship in Settings and persisted in IndexedDB
-ship-settings under `reconcileTolerances`. First cruise (no prior ended voyage)
+defaults 2 / 5 / 10), editable per-ship in Settings and persisted in the shared
+`_settings.json` on the ship folder under `reconcileTolerances` (via the adapter's
+`loadSettings` / `saveSettings`, same as default densities). First cruise (no prior ended voyage)
 or a missing sounding degrades the affected row to `—` rather than a misleading
 number. Design spec:
 [docs/superpowers/specs/2026-06-07-cruise-reconciliation-design.md](docs/superpowers/specs/2026-06-07-cruise-reconciliation-design.md).
@@ -306,23 +321,24 @@ The original `mockup/index.html` was the Phase 1 sign-off artifact and once gove
 
 ## 9. Reuse from v6
 
-Carried over (refactored to read equipment from class config instead of hardcoded keys):
+Carried over from v6 and **rewritten in TypeScript** (and refactored to read
+equipment from class config instead of hardcoded keys):
 
-- `src/domain/factories.js`, `calculations.js`, `validation.js`, `constants.js`
-- `src/components/voyage/ReportForm.jsx`, `PhaseSection.jsx`, `EquipmentRow.jsx`, `CruiseSummary.jsx`, `VoyageReportSection.jsx`
+- `src/domain/factories.ts`, `calculations.ts`, `constants.ts` (validation was folded into `calculations.ts` / form-level checks — there is no standalone `validation` module)
+- `src/components/voyage/ReportForm.tsx`, `PhaseSection.tsx`, `EquipmentRow.tsx`, `VoyageReportSection.tsx` (v6's `CruiseSummary` is now inlined in `detail/VoyageDetail.tsx`)
 - Creation modals under `src/components/modals/` (New Voyage, Add Leg, End Voyage)
-- `Icons.jsx` (extended with Anchor, Cloud, Folder, Download, Upload, etc.)
+- `Icons.tsx` (extended with Anchor, Cloud, Folder, Download, Upload, etc.)
 - `app.css` (Signal Flag Bands theme)
 - `ThemeContext`, `ToastContext`
 
-**Verification:** re-enter 3 v6 sample voyages in v7, fuel totals (HFO/MGO/LSFO MT) must match v6 to 0.01.
+**Verification:** re-enter 3 v6 sample voyages, fuel totals (HFO/MGO/LSFO MT) must match v6 to 0.01.
 
 ---
 
 ## 10. Project layout
 
 ```
-Voyage_Tracker_v7/
+Voyage_Tracker_v8/
 ├── CLAUDE.md                           # this file
 ├── AGENTS.md                           # agent onboarding cheatsheet
 ├── public/
@@ -333,28 +349,30 @@ Voyage_Tracker_v7/
 ├── scripts/
 │   └── build-ports-catalog.mjs         # one-shot: fetch UN/LOCODE dump → filter → write public/ports.json
 ├── src/
-│   ├── storage/
-│   │   ├── adapter.js                  # interface + shared error types (StorageError, ConflictError, NotFoundError)
-│   │   ├── indexeddb.js                # IDB helpers: handles, session, draft cache, custom ports
+│   ├── storage/                        # all TypeScript (.ts)
+│   │   ├── adapter.ts                  # interface + shared error types (StorageError, ConflictError, NotFoundError)
+│   │   ├── indexeddb.ts                # IDB helpers: handles, session, draft cache, custom ports
 │   │   └── local/
-│   │       ├── index.js                # adapter install (listVoyages / loadVoyage / saveVoyage / …)
-│   │       ├── fsHandle.js             # directory-handle lifecycle (pick, persist, re-permission)
-│   │       ├── voyages.js              # CRUD against a per-ship folder
-│   │       ├── errors.js               # StaleFileError, NoDirectoryError, UnsupportedBrowserError, PathSafetyError
-│   │       └── exportImport.js         # bundle build / download / parse / import
-│   ├── domain/                         # factories, calculations, validation, constants, ports
-│   ├── contexts/                       # Theme, Toast, Session, VoyageStore
-│   ├── hooks/                          # useTheme, useToast, useSession, useVoyageStore, useEscapeKey
-│   ├── components/
+│   │       ├── index.ts                # adapter install (listVoyages / loadVoyage / saveVoyage / loadSettings / saveSettings)
+│   │       ├── fsHandle.ts             # directory-handle lifecycle (pick, persist, re-permission)
+│   │       ├── voyages.ts              # CRUD against a per-ship folder (manifest by dir-listing, no _index.json)
+│   │       ├── settings.ts             # shared _settings.json read/write (densities + reconcile tolerances)
+│   │       ├── safeFilename.ts         # path-safety guard for voyage filenames
+│   │       ├── errors.ts               # StaleFileError, NoDirectoryError, UnsupportedBrowserError, PathSafetyError
+│   │       └── exportImport.ts         # bundle build / download / parse / import
+│   ├── domain/                         # factories, calculations, constants, ports, shipClass, legReportNavigation (all .ts)
+│   ├── contexts/                       # Theme, Toast, Session, VoyageStore (Context + Provider split)
+│   ├── hooks/                          # useTheme, useToast, useSession, useVoyageStore, useEscapeKey, useFocusTrap
+│   ├── components/                     # all .tsx (+ a few .ts)
 │   │   ├── auth/                       # AuthGate (session-based router)
-│   │   ├── session/                    # LandingScreen (ship + name + role + folder)
+│   │   ├── session/                    # LandingScreen + landing/ (Steps, useFolderProbe)
 │   │   ├── layout/                     # AppShell, TopBar, DetailPane
 │   │   ├── tree/                       # VoyageTree, TreeNode, TreeToolbar
-│   │   ├── detail/                     # VoyageDetail, ReportDetail, VoyageReportDetail, VoyageEndDetail, EmptyState
+│   │   ├── detail/                     # VoyageDetail, ReportDetail, VoyageReportDetail, VoyageEndDetail, ReconciliationPanel, EmptyState
 │   │   ├── voyage/                     # ReportForm, PhaseSection, EquipmentRow, VoyageReportSection, …
-│   │   ├── modals/                     # NewVoyage, AddLeg, VoyageEnd, DeleteVoyage, StaleFile, Settings, ManualCarryOver, Help
-│   │   ├── ui/                         # PortCombobox, FloatingCarryOverButton, etc.
-│   │   └── Icons.jsx
+│   │   ├── modals/                     # NewVoyage, AddLeg, VoyageEnd, DeleteVoyage, DeleteLeg, StaleFile, SettingsPanel, ManualCarryOver, ImportCounters, Help
+│   │   ├── ui/                         # PortCombobox, FloatingCarryOverButton, DurationPicker, TimePicker6Min
+│   │   └── Icons.tsx
 │   ├── styles/
 │   │   └── app.css
 │   ├── App.tsx
@@ -385,4 +403,4 @@ Voyage_Tracker_v7/
 
 ---
 
-*Last updated: 2026-06-17.*
+*Last updated: 2026-06-23.*
