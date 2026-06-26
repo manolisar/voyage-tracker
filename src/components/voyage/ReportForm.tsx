@@ -39,7 +39,7 @@ export function ReportForm({ report, onChange, densities, shipClass, readOnly = 
   const toast = useToast();
 
   const operationalPhases = report.phases.filter((p) => p.type !== PHASE_TYPES.STANDBY);
-  const standbyPhase = report.phases.find((p) => p.type === PHASE_TYPES.STANDBY);
+  const standbyPhases = report.phases.filter((p) => p.type === PHASE_TYPES.STANDBY);
   const isDeparture = report.type === REPORT_TYPES.DEPARTURE;
 
   const handlePhaseChange = (phaseId: number, newPhase: Phase) => {
@@ -50,11 +50,16 @@ export function ReportForm({ report, onChange, densities, shipClass, readOnly = 
   const handleAddPhase = () => {
     const phaseType = isDeparture ? PHASE_TYPES.PORT : PHASE_TYPES.SEA;
     const newPhase = createPhase(shipClass, phaseType, 'C/O (From → To)');
-    // Insert before standby so changeover phases stay in operational order.
-    const newPhases = [...operationalPhases, newPhase];
-    if (standbyPhase) newPhases.push(standbyPhase);
+    const newPhases = [...operationalPhases, newPhase, ...standbyPhases];
     onChange({ ...report, phases: newPhases });
     toast.addToast('New phase added', 'success');
+  };
+
+  const handleAddStandbyChangeover = () => {
+    const newPhase = createPhase(shipClass, PHASE_TYPES.STANDBY, 'Fuel C/O');
+    const newPhases = [...operationalPhases, ...standbyPhases, newPhase];
+    onChange({ ...report, phases: newPhases });
+    toast.addToast('Fuel changeover phase added', 'success');
   };
 
   const handleDeletePhase = (phaseId: number) => {
@@ -237,19 +242,29 @@ export function ReportForm({ report, onChange, densities, shipClass, readOnly = 
             <div className="flex-1 border-t" style={{ borderColor: 'var(--color-border-subtle)' }}></div>
           </div>
 
-          {standbyPhase && (
+          {standbyPhases.map((sp, idx) => (
             <PhaseSection
-              key={standbyPhase.id}
-              phase={standbyPhase}
+              key={sp.id}
+              phase={sp}
               shipClass={shipClass}
-              onChange={(p) => handlePhaseChange(standbyPhase.id, p)}
-              onDelete={() => {}}
-              canDelete={false}
+              onChange={(p) => handlePhaseChange(sp.id, p)}
+              onDelete={() => handleDeletePhase(sp.id)}
+              canDelete={standbyPhases.length > 1 && idx > 0}
               densities={densities}
-              showTotals
+              showTotals={idx === standbyPhases.length - 1}
               cumulativeTotals={null}
               readOnly={readOnly}
             />
+          ))}
+
+          {!readOnly && (
+            <button
+              onClick={handleAddStandbyChangeover}
+              className="w-full py-2.5 border-2 border-dashed rounded-lg font-semibold text-[0.72rem] mb-5 transition-all flex items-center justify-center gap-2"
+              style={{ borderColor: 'var(--color-border-subtle)', color: 'var(--color-dim)' }}
+            >
+              <Plus className="w-4 h-4" /> Add Fuel Changeover Phase
+            </button>
           )}
 
           {/* Report totals card */}
